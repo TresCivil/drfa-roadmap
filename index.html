@@ -165,6 +165,11 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
 
   <button class="clear-btn" onclick="clearFilters()">✕ Clear filters</button>
 
+  <!-- Has Damage No. toggle -->
+  <button id="hasDamageBtn" onclick="toggleHasDamage()" style="height:28px;padding:0 11px;font-family:inherit;font-size:11px;font-weight:600;border:1.5px solid #1a1a2e;border-radius:var(--radius);background:#1a1a2e;color:#fff;cursor:pointer;transition:all .15s;white-space:nowrap;" title="Showing: Has Damage No. only">
+    # Damage No. only
+  </button>
+
   <!-- Connection badge pushed to far right -->
   <div style="margin-left:auto;display:flex;align-items:center;">
     <div class="conn-badge">
@@ -259,36 +264,34 @@ const DEMO=[
 
 ];
 
-/* ── NORMALISE ── maps both Dataverse cr8fb_ logical names AND friendly camelCase keys ── */
+/* ── NORMALISE ── maps Power Apps JSON keys to internal fields ── */
 function normalise(raw){
-  // Accept either Dataverse logical name or friendly camelCase fallback
-  function g(logical, friendly){
-    if(raw[logical]!==undefined&&raw[logical]!==null) return raw[logical];
-    if(friendly&&raw[friendly]!==undefined&&raw[friendly]!==null) return raw[friendly];
-    // lowercase fallback
-    const lk=logical.toLowerCase();
-    if(raw[lk]!==undefined&&raw[lk]!==null) return raw[lk];
+  function g(...keys){
+    for(const k of keys){
+      if(raw[k]!==undefined&&raw[k]!==null&&raw[k]!=='') return raw[k];
+    }
     return undefined;
   }
-  const dmgNo = g('cr8fb_Recover_Damange_Number','damageNumber') || '';
+  const dmgNo = g('Recover_Damange_Number','cr8fb_Recover_Damange_Number','damageNumber') || '';
   return {
-    eventNo:      g('cr8fb_AGRN_No',            'eventNo')      || '',
-    category:     g('cr8fb_Work_Register_Name', 'category')     || '',
+    eventNo:      g('AGRN_No.','cr8fb_AGRN_No','eventNo')                                       || '',
+    category:     g('Work_Register_Name','cr8fb_Work_Register_Name','category')                  || '',
     damageNumber: dmgNo,
-    damageDetails:g('cr8fb_ROAD_Class',         'damageDetails')|| '',
-    roadName:     g('cr8fb_Road_Name',          'roadName')     || '',
-    roadType:     g('cr8fb_AssetType',          'roadType')     || '',
-    location:     g('cr8fb_cr8fb_LocationLevel1','location')    || '',
-    lat:          parseFloat(g('cr8fb_Latitude',  'lat')||0),
-    lng:          parseFloat(g('cr8fb_Longitude', 'lng')||0),
-    parentID:     g('cr8fb_PROJECTSId',         'parentID')     || '',
-    recoverRef:   dmgNo,   // Recover Ref = Damage Number per spec
-    pm:           g('PM',                      'pm')           || '',
+    damageDetails:g('ROAD_Class','cr8fb_ROAD_Class','damageDetails')                             || '',
+    roadName:     g('Road_Name','cr8fb_Road_Name','roadName')                                    || '',
+    roadType:     g('Asset Type','cr8fb_AssetType','roadType')                                   || '',
+    location:     g('LocationLevel1','Location - Level 1','cr8fb_cr8fb_LocationLevel1','location')|| '',
+    lat:          parseFloat(g('Latitude','cr8fb_Latitude','lat')||0),
+    lng:          parseFloat(g('Longitude','cr8fb_Longitude','lng')||0),
+    parentID:     g('PROJECTSId','cr8fb_PROJECTSId','parentID')                                 || '',
+    recoverRef:   dmgNo,
+    pm:           g('PM','cr8fb_PM','pm')                                                        || '',
+    depot:        g('Depot','depot')                                                              || '',
   };
 }
 
 /* ── STATE ── */
-let records=[], activeEvent='EN0001', activeCategory=null, filterDamage='', filterRoad='', filterPM='';
+let records=[], activeEvent='EN0001', activeCategory=null, filterDamage='', filterRoad='', filterPM='', filterHasDamage=true;
 let azMap=null, popup=null, markers=[];
 const groupOpen={};
 const CAT_KEYS=['IRW','EW','EPAR'];
@@ -322,10 +325,11 @@ function buildEventTabs(){
   `).join('');
 }
 function setEvent(ev){
-  activeEvent=ev; activeCategory=null; filterDamage=''; filterRoad=''; filterPM='';
+  activeEvent=ev; activeCategory=null; filterDamage=''; filterRoad=''; filterPM=''; filterHasDamage=true;
   document.getElementById('filterDamage').value='';
   document.getElementById('filterRoad').value='';
   document.getElementById('filterPM').value='';
+  updateHasDamageBtn();
   Object.keys(groupOpen).forEach(k=>{groupOpen[k]=false;});
   buildEventTabs(); buildCatChips(); populateDropdowns();
   renderStats(); renderList(); updatePins(); setTimeout(fitAll,100);
@@ -362,18 +366,36 @@ function populateDropdowns(){
   if(damages.includes(cd))dS.value=cd; if(roads.includes(cr))rS.value=cr; if(pms.includes(cp))pS.value=cp;
 }
 function clearFilters(){
-  activeCategory=null; filterDamage=''; filterRoad=''; filterPM='';
+  activeCategory=null; filterDamage=''; filterRoad=''; filterPM=''; filterHasDamage=true;
   document.getElementById('filterDamage').value='';
   document.getElementById('filterRoad').value='';
   document.getElementById('filterPM').value='';
+  updateHasDamageBtn();
   Object.keys(groupOpen).forEach(k=>{groupOpen[k]=false;});
   buildCatChips(); if(popup)popup.close(); renderList(); updatePins(); setTimeout(fitAll,100);
+}
+function toggleHasDamage(){
+  filterHasDamage=!filterHasDamage;
+  updateHasDamageBtn();
+  renderList(); updatePins(); setTimeout(fitAll,100);
+}
+function updateHasDamageBtn(){
+  const btn=document.getElementById('hasDamageBtn');
+  if(!btn)return;
+  if(filterHasDamage){
+    btn.style.background='#1a1a2e'; btn.style.color='#fff'; btn.style.borderColor='#1a1a2e';
+    btn.title='Showing: Has Damage No. only — click to show all';
+  } else {
+    btn.style.background='#fff'; btn.style.color='#6b7280'; btn.style.borderColor='rgba(0,0,0,0.12)';
+    btn.title='Showing: All records — click to filter by Damage No.';
+  }
 }
 
 /* ── FILTER ── */
 function getFiltered(){
   return records.filter(r=>{
     if(r.eventNo!==activeEvent)return false;
+    if(filterHasDamage&&!r.damageNumber)return false;
     if(activeCategory&&r.category!==activeCategory)return false;
     if(filterDamage&&r.damageNumber!==filterDamage)return false;
     if(filterRoad&&r.roadName!==filterRoad)return false;
@@ -658,7 +680,7 @@ if(!loadFromHash()){
   records=_all.filter(r=>r.lat!==0&&r.lng!==0&&!isNaN(r.lat)&&!isNaN(r.lng));
   document.getElementById('connLabel').textContent='Demo · '+records.length+' records';
 }
-buildEventTabs(); buildCatChips(); populateDropdowns(); renderStats(); renderList();
+buildEventTabs(); buildCatChips(); populateDropdowns(); renderStats(); renderList(); updateHasDamageBtn();
 // Default collapsed side pane
 (()=>{
   const side=document.getElementById('side');
