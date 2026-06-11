@@ -283,7 +283,7 @@ function normalise(raw){
     lng:          parseFloat(g('cr8fb_Longitude', 'lng')||0),
     parentID:     g('cr8fb_PROJECTSId',         'parentID')     || '',
     recoverRef:   dmgNo,   // Recover Ref = Damage Number per spec
-    pm:           g('cr8fb_PM',                 'pm')           || '',
+    pm:           g('PM',                      'pm')           || '',
   };
 }
 
@@ -451,34 +451,30 @@ function highlightList(r){
   }
 }
 
-/* ── POPUP HTML ── */
+/* ── POPUP HTML — static map image loaded lazily ── */
 function popupHtml(r){
   const col=cc(r.category);
-  const staticUrl=`https://atlas.microsoft.com/map/static?api-version=2024-04-01&tilesetId=microsoft.base.hybrid.road&zoom=15&center=${r.lng},${r.lat}&width=280&height=120&language=en-AU&subscription-key=${AZURE_KEY}`;
-  const imgHtml=`<img class="pop-img" src="${staticUrl}" alt="location preview" style="height:120px;object-fit:cover;" onerror="this.outerHTML='<div class=pop-img-ph>📍</div>'">`;
+  // Static map image — use a placeholder first, swap in real image lazily
+  const staticUrl=`https://atlas.microsoft.com/map/static?api-version=2024-04-01&tilesetId=microsoft.base.hybrid.road&zoom=15&center=${r.lng},${r.lat}&width=280&height=100&language=en-AU&subscription-key=${AZURE_KEY}`;
+  const imgHtml=`<div class="pop-img-ph" id="pop-img-ph" style="cursor:pointer;user-select:none;" onclick="loadPopupImg(this,'${staticUrl}')">📍 <span style="font-size:11px;color:#6b7280;margin-left:6px;">Tap to load map preview</span></div>`;
   const lat=r.lat.toFixed(6), lng=r.lng.toFixed(6);
   const googleUrl=`https://www.google.com/maps?q=${lat},${lng}`;
   const appleUrl=`https://maps.apple.com/?ll=${lat},${lng}&q=${encodeURIComponent(r.roadName||r.damageNumber)}`;
 
-  // Build Recover NSW link based on category and parentID
   let recoverLinkHtml='';
   if(r.parentID){
     let recoverUrl='';
     if(r.category==='EW'){
       recoverUrl=`https://recover-nsw.civicagov.com/EmergentWorks/ListView?q=${r.parentID}&stq=${r.recoverRef||''}&e=${r.parentID}`;
-    } else if(r.category==='IRW'||r.category==='EPAR'){
-      recoverUrl=`https://recover-nsw.civicagov.com/Damages/ListView?q=${r.parentID}&stq=${r.recoverRef||''}&e=${r.parentID}`;
-    } else if(r.category==='RW'){
+    } else {
       recoverUrl=`https://recover-nsw.civicagov.com/Damages/ListView?q=${r.parentID}&stq=${r.recoverRef||''}&e=${r.parentID}`;
     }
-    if(recoverUrl){
-      recoverLinkHtml=`<div style="padding:0 16px 10px;">
-        <a class="pop-map-btn recover" href="${recoverUrl}" target="_blank" rel="noopener" style="flex:1;background:#f0fdf4;border-color:#86efac;color:#166534;">
-          <svg viewBox="0 0 14 14" fill="none" style="width:14px;height:14px;flex-shrink:0"><path d="M7 1C3.69 1 1 3.69 1 7s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z" stroke="#166534" stroke-width="1.2"/><path d="M4.5 7h5M9.5 7L7.5 5M9.5 7L7.5 9" stroke="#166534" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          View in Recover &nbsp;<span style="font-size:10px;opacity:.7;">${r.recoverRef||r.damageNumber}</span>
-        </a>
-      </div>`;
-    }
+    recoverLinkHtml=`<div style="padding:0 16px 10px;">
+      <a class="pop-map-btn recover" href="${recoverUrl}" target="_blank" rel="noopener" style="flex:1;background:#f0fdf4;border-color:#86efac;color:#166534;">
+        <svg viewBox="0 0 14 14" fill="none" style="width:14px;height:14px;flex-shrink:0"><path d="M7 1C3.69 1 1 3.69 1 7s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z" stroke="#166534" stroke-width="1.2"/><path d="M4.5 7h5M9.5 7L7.5 5M9.5 7L7.5 9" stroke="#166534" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        View in Recover &nbsp;<span style="font-size:10px;opacity:.7;">${r.recoverRef||r.damageNumber}</span>
+      </a>
+    </div>`;
   }
 
   return `<div class="pop-inner">
@@ -512,6 +508,11 @@ function popupHtml(r){
   </div>`;
 }
 
+/* lazy load popup static map */
+function loadPopupImg(el,url){
+  el.outerHTML=`<img class="pop-img" src="${url}" style="height:100px;object-fit:cover;display:block;width:100%;border-top:1px solid var(--rim);border-bottom:1px solid var(--rim);" onerror="this.outerHTML='<div class=pop-img-ph>📍</div>'">`;
+}
+
 /* ── PIN SVG ── */
 function pinSvg(col){
   return `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42"
@@ -521,7 +522,7 @@ function pinSvg(col){
   </svg>`;
 }
 
-/* ── AZURE MAP INIT ── */
+/* ── AZURE MAP INIT — lightweight road style ── */
 function initMap(){
   azMap=new atlas.Map('azureMap',{
     center:[152.45,-31.75],
@@ -529,6 +530,9 @@ function initMap(){
     style:'satellite_road_labels',
     authOptions:{authType:'subscriptionKey',subscriptionKey:AZURE_KEY},
     language:'en-AU',
+    renderWorldCopies:false,
+    showLogo:false,
+    showFeedbackLink:false,
   });
   azMap.events.add('ready',()=>{
     popup=new atlas.Popup({
@@ -537,56 +541,74 @@ function initMap(){
       fillColor:'transparent',
       strokeColor:'transparent',
     });
-    updatePins();
+    // Defer first pin render until after map tiles settle
+    setTimeout(updatePins, 200);
   });
 }
 
-/* ── UPDATE PINS ── */
+/* ── UPDATE PINS — batched via rAF to avoid blocking ── */
+let _pinTimer=null;
 function updatePins(){
   if(!azMap)return;
-  markers.forEach(m=>azMap.markers.remove(m.marker||m));
-  markers=[];
-  const vis=getFiltered();
-  vis.forEach((r,i)=>{
-    const col=cc(r.category);
-    const markerId='pin-'+i;
-    const htmlStr=`<div id="${markerId}" style="cursor:pointer;display:block;">
-      <div class="pin-inner" style="display:block;transition:filter .15s;">${pinSvg(col)}</div>
-    </div>`;
-    const marker=new atlas.HtmlMarker({htmlContent:htmlStr,position:[r.lng,r.lat],anchor:'bottom'});
-    azMap.markers.add(marker);
-    markers.push({marker,record:r});
-    azMap.events.add('click',marker,()=>{
-      popup.setOptions({content:`<div class="azure-popup">${popupHtml(r)}</div>`,position:[r.lng,r.lat]});
-      popup.open(azMap);
-      highlightList(r);
-      postUp({type:'PIN_CLICK',damageNumber:r.damageNumber,category:r.category,eventNo:r.eventNo,lat:r.lat,lng:r.lng});
-    });
-    azMap.events.add('mouseenter',marker,()=>{
-      const el=marker.getElement();if(el){const inner=el.querySelector('.pin-inner');if(inner)inner.style.filter='brightness(1.2)';}
-    });
-    azMap.events.add('mouseleave',marker,()=>{
-      const el=marker.getElement();if(el){const inner=el.querySelector('.pin-inner');if(inner)inner.style.filter='';}
-    });
-  });
+  // Debounce rapid calls
+  if(_pinTimer)clearTimeout(_pinTimer);
+  _pinTimer=setTimeout(()=>{
+    markers.forEach(m=>azMap.markers.remove(m.marker||m));
+    markers=[];
+    const vis=getFiltered();
+    // Add in batches of 20 across animation frames
+    const BATCH=20;
+    function addBatch(start){
+      const end=Math.min(start+BATCH,vis.length);
+      for(let i=start;i<end;i++){
+        const r=vis[i];
+        const col=cc(r.category);
+        const htmlStr=`<div style="cursor:pointer;display:block;">
+          <div class="pin-inner" style="display:block;transition:filter .15s;">${pinSvg(col)}</div>
+        </div>`;
+        const marker=new atlas.HtmlMarker({htmlContent:htmlStr,position:[r.lng,r.lat],anchor:'bottom'});
+        azMap.markers.add(marker);
+        const rec=r;
+        markers.push({marker,record:rec});
+        azMap.events.add('click',marker,()=>{
+          popup.setOptions({content:`<div class="azure-popup">${popupHtml(rec)}</div>`,position:[rec.lng,rec.lat]});
+          popup.open(azMap);
+          highlightList(rec);
+          postUp({type:'PIN_CLICK',damageNumber:rec.damageNumber,category:rec.category,eventNo:rec.eventNo,lat:rec.lat,lng:rec.lng});
+        });
+        azMap.events.add('mouseenter',marker,()=>{
+          const el=marker.getElement();if(el){const inner=el.querySelector('.pin-inner');if(inner)inner.style.filter='brightness(1.2)';}
+        });
+        azMap.events.add('mouseleave',marker,()=>{
+          const el=marker.getElement();if(el){const inner=el.querySelector('.pin-inner');if(inner)inner.style.filter='';}
+        });
+      }
+      if(end<vis.length) requestAnimationFrame(()=>addBatch(end));
+    }
+    addBatch(0);
+  }, 80);
 }
 
-/* ── FIT ALL ── */
+/* ── FIT ALL — debounced ── */
+let _fitTimer=null;
 function fitAll(){
-  const vis=getFiltered(); if(!vis.length||!azMap)return;
-  const lats=vis.map(r=>r.lat), lngs=vis.map(r=>r.lng);
-  const west=Math.min(...lngs), east=Math.max(...lngs);
-  const south=Math.min(...lats), north=Math.max(...lats);
-  const centerLng=(west+east)/2, centerLat=(south+north)/2;
-  const dlng=(east-west)||0.001, dlat=(north-south)||0.001;
-  const mapW=(document.getElementById('mapArea').offsetWidth)||900;
-  const mapH=(document.getElementById('mapArea').offsetHeight)||600;
-  const zLng=Math.log2(mapW*360/(dlng*256*1.5));
-  const zLat=Math.log2(mapH*170/(dlat*256*1.5));
-  let zoom=Math.floor(Math.min(zLng,zLat));
-  const isFiltered=(activeCategory||filterDamage||filterRoad);
-  zoom=Math.min(16,Math.max(isFiltered?13:7,zoom));
-  azMap.setCamera({center:[centerLng,centerLat],zoom,duration:800,type:'fly'});
+  if(_fitTimer)clearTimeout(_fitTimer);
+  _fitTimer=setTimeout(()=>{
+    const vis=getFiltered(); if(!vis.length||!azMap)return;
+    const lats=vis.map(r=>r.lat), lngs=vis.map(r=>r.lng);
+    const west=Math.min(...lngs), east=Math.max(...lngs);
+    const south=Math.min(...lats), north=Math.max(...lats);
+    const centerLng=(west+east)/2, centerLat=(south+north)/2;
+    const dlng=(east-west)||0.001, dlat=(north-south)||0.001;
+    const mapW=(document.getElementById('mapArea').offsetWidth)||900;
+    const mapH=(document.getElementById('mapArea').offsetHeight)||600;
+    const zLng=Math.log2(mapW*360/(dlng*256*1.5));
+    const zLat=Math.log2(mapH*170/(dlat*256*1.5));
+    let zoom=Math.floor(Math.min(zLng,zLat));
+    const isFiltered=(activeCategory||filterDamage||filterRoad||filterPM);
+    zoom=Math.min(16,Math.max(isFiltered?13:7,zoom));
+    azMap.setCamera({center:[centerLng,centerLat],zoom,duration:600,type:'ease'});
+  }, 120);
 }
 
 /* ── FLY TO RECORD ── */
