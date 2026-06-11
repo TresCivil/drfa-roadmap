@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DRFA Damage Map — Event &amp; Category View</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- Azure Maps SDK -->
+<link rel="stylesheet" href="https://atlas.microsoft.com/sdk/javascript/mapcontrol/3/atlas.min.css"/>
+<script>window.__atlasReady=false;</script>
+<script src="https://atlas.microsoft.com/sdk/javascript/mapcontrol/3/atlas.min.js" async onload="window.__atlasReady=true;if(window.__bootDone)initMap();"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;background:#fff;color:#1a1a2e;overflow:hidden;-webkit-font-smoothing:antialiased}
+:root{
+  --surface:#fff;--surface2:#f5f7fa;--surface3:#e8edf5;
+  --rim:rgba(0,0,0,0.07);--rim2:rgba(0,0,0,0.12);
+  --text:#1a1a2e;--muted:#6b7280;--faint:#9ca3af;
+  --ew:#3B82F6;--irw:#10B981;--epar:#F59E0B;--rw:#F97316;
+  --radius:6px;--radius-lg:12px;--radius-xl:18px;
+}
+#app{display:grid;grid-template-rows:auto 1fr;height:100vh;min-height:0}
+
+/* ── TOP BAR ── */
+#topbar{display:flex;align-items:stretch;background:#fff;border-bottom:1px solid var(--rim2);min-height:56px;position:relative;z-index:10}
+.tb-brand{display:flex;align-items:center;gap:12px;padding:0 20px;border-right:1px solid var(--rim);flex-shrink:0}
+.brand-title{font-size:13px;font-weight:700;color:#1a1a2e;letter-spacing:-.01em}
+.brand-sub{font-size:10px;color:var(--muted);font-weight:500}
+.tb-stats{display:flex;align-items:center;gap:1px;flex:1;padding:0 12px}
+.stat-pill{display:flex;flex-direction:column;justify-content:center;padding:0 16px;min-width:110px;height:100%;border-right:1px solid var(--rim)}
+.stat-pill:last-child{border-right:none}
+.stat-label{font-size:10px;color:var(--muted);font-weight:600;margin-bottom:4px}
+.stat-value{font-size:18px;font-weight:700;color:#1a1a2e;line-height:1;margin-bottom:5px}
+.stat-bar-track{height:3px;background:#e5e7eb;border-radius:2px;overflow:hidden}
+.stat-bar-fill{height:100%;border-radius:2px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.tb-right{display:flex;align-items:center;gap:10px;padding:0 16px;border-left:1px solid var(--rim);flex-shrink:0}
+.conn-badge{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.conn-dot{width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 8px rgba(16,185,129,.4);flex-shrink:0}
+
+/* ── FILTER BAR ── */
+#filterbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:#f8f9fb;border-bottom:1px solid var(--rim);flex-wrap:wrap;z-index:9}
+.fb-label{font-size:12px;font-weight:500;color:#9ca3af;white-space:nowrap}
+.fb-sep{width:1px;height:18px;background:var(--rim2);flex-shrink:0;margin:0 4px}
+.cat-chips{display:flex;gap:5px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:600;border:1.5px solid transparent;cursor:pointer;transition:all .18s;background:#fff;white-space:nowrap;font-family:inherit}
+.chip .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.chip:hover{filter:brightness(.94);transform:translateY(-1px)}
+.chip.active{color:#fff!important}
+.fb-select{height:28px;padding:0 28px 0 10px;font-family:inherit;font-size:12px;border:1.5px solid var(--rim2);border-radius:var(--radius);background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239ca3af'/%3E%3C/svg%3E") no-repeat right 8px center;-webkit-appearance:none;appearance:none;color:#1a1a2e;outline:none;cursor:pointer;transition:border-color .15s}
+.fb-select:focus{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+.fb-select option{background:#fff}
+.clear-btn{display:flex;align-items:center;gap:5px;height:28px;padding:0 12px;font-family:inherit;font-size:11px;font-weight:600;border:1.5px solid var(--rim2);border-radius:var(--radius);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap}
+.clear-btn:hover{background:rgba(248,81,73,.1);border-color:rgba(248,81,73,.4);color:#f85149}
+
+/* ── LAYOUT ── */
+#main{display:flex;overflow:hidden;min-height:0;position:relative}
+
+/* ── SIDE PANEL ── */
+#side{width:300px;flex-shrink:0;background:#fff;border-right:1px solid var(--rim2);display:flex;flex-direction:column;transition:width .28s cubic-bezier(.4,0,.2,1);min-width:0;overflow:hidden;position:relative}
+#side.collapsed{width:0!important;border-right:none}
+#sideList{flex:1;overflow-y:auto}
+#sideList::-webkit-scrollbar{width:3px}
+#sideList::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:2px}
+.list-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:1px solid var(--rim);cursor:pointer;transition:background .12s;position:relative}
+.list-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;opacity:0;transition:opacity .15s;border-radius:0 2px 2px 0}
+.list-item:hover{background:var(--surface2)}
+.list-item:hover::before{opacity:.5}
+.list-item.active{background:var(--surface3)}
+.list-item.active::before{opacity:1}
+.li-pin{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:2px}
+.li-text{flex:1;overflow:hidden}
+.li-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li-sub{font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li-detail{font-size:10px;color:var(--faint);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li-cat{font-size:10px;font-weight:700;border-radius:6px;padding:3px 8px;white-space:nowrap;flex-shrink:0;margin-top:2px}
+.group-header{display:flex;align-items:center;gap:8px;padding:8px 14px;background:#f5f7fa;border-bottom:1px solid var(--rim);cursor:pointer;user-select:none;position:sticky;top:0;z-index:1;transition:background .12s}
+.group-header:hover{background:#eef0f5}
+.group-chevron{width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--muted);flex-shrink:0;transition:transform .2s cubic-bezier(.4,0,.2,1)}
+.group-chevron.open{transform:rotate(90deg)}
+.group-name{font-size:12px;font-weight:600;color:var(--text);flex:1}
+.group-count{font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;background:var(--surface3);color:var(--muted)}
+
+.group-body{overflow:hidden;transition:max-height .25s cubic-bezier(.4,0,.2,1)}
+.group-body.collapsed{max-height:0!important}
+
+/* ── MAP ── */
+#mapArea{flex:1;position:relative;overflow:hidden}
+#azureMap{position:absolute;top:0;left:0;right:0;bottom:0}
+
+/* Pane toggle */
+#paneToggle{position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:50;width:18px;height:56px;background:#fff;border:1px solid var(--rim2);border-left:none;border-radius:0 8px 8px 0;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:12px;font-weight:700;box-shadow:2px 0 8px rgba(0,0,0,.14);transition:background .15s,color .15s;padding:0}
+#paneToggle:hover{background:#f0f4ff;color:#1a1a2e}
+#paneToggle .arrow{transition:transform .28s cubic-bezier(.4,0,.2,1);display:inline-block;line-height:1}
+body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
+
+/* Legend */
+#legend{position:absolute;bottom:30px;left:14px;z-index:10;background:#fff;border:1px solid var(--rim2);border-radius:var(--radius-lg);padding:12px 14px;box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.leg-title{font-size:10px;font-weight:600;color:var(--faint);margin-bottom:8px}
+.leg-row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:500}
+.leg-row:last-child{margin-bottom:0}
+.leg-swatch{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+
+/* Popup */
+.azure-popup .pop-inner{background:#fff;border:1px solid var(--rim2);border-radius:var(--radius-xl);box-shadow:0 12px 40px rgba(0,0,0,.18);min-width:290px;max-width:330px;overflow:hidden}
+.pop-accent-bar{height:4px;width:100%}
+.pop-head{padding:12px 16px 9px;border-bottom:1px solid var(--rim)}
+.pop-eyebrow{font-size:10px;font-weight:700;margin-bottom:4px}
+.pop-title{font-size:14px;font-weight:700;color:var(--text);line-height:1.3}
+.pop-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.pop-img{width:100%;height:120px;object-fit:cover;display:block;border-top:1px solid var(--rim);border-bottom:1px solid var(--rim);background:#e8edf5}
+.pop-img-ph{width:100%;height:70px;background:linear-gradient(135deg,#f5f7fa,#e8edf5);display:flex;align-items:center;justify-content:center;font-size:24px;border-top:1px solid var(--rim);border-bottom:1px solid var(--rim)}
+.pop-body{padding:10px 16px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+.pop-field{display:flex;flex-direction:column;gap:2px}
+.pop-field.full{grid-column:1/-1}
+.pop-fkey{font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--faint)}
+.pop-fval{font-size:12px;color:var(--text);font-weight:500}
+.pop-map-links{display:flex;gap:8px;padding:0 16px 14px;}
+.pop-map-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 10px;border-radius:8px;font-size:11px;font-weight:600;font-family:inherit;cursor:pointer;text-decoration:none;border:1.5px solid transparent;transition:all .15s;}
+.pop-map-btn:hover{filter:brightness(.93);}
+.pop-map-btn.apple{background:#f5f5f7;border-color:#e0e0e5;color:#1d1d1f;}
+.pop-map-btn.google{background:#e8f0fe;border-color:#c5d5f8;color:#1a56db;}
+.pop-map-btn svg{width:14px;height:14px;flex-shrink:0;}
+
+/* ── RESIZABLE SPLITTER ── */
+#splitter{width:6px;background:var(--rim2);cursor:col-resize;flex-shrink:0;position:relative;z-index:20;transition:background .15s;display:flex;align-items:center;justify-content:center;}
+#splitter:hover,#splitter.dragging{background:#c7d2fe;}
+#splitter::after{content:'⋮';font-size:12px;color:#c7d2fe;letter-spacing:-1px;pointer-events:none;}
+#splitter:hover::after,#splitter.dragging::after{color:#6366f1;}
+
+/* Event tab switcher */
+.event-tabs{display:flex;gap:0;background:#e8edf5;border-radius:8px;padding:3px;margin-right:4px}
+.event-tab{padding:3px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .15s;font-family:inherit}
+.event-tab.active{background:#fff;color:#1a1a2e;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.event-tab:hover:not(.active){color:#1a1a2e}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- FILTER BAR -->
+<div id="filterbar">
+  <!-- Event No. tab switcher -->
+  <span class="fb-label">Event No.</span>
+  <div class="event-tabs" id="eventTabs"></div>
+
+  <div class="fb-sep"></div>
+
+  <!-- Category chips -->
+  <span class="fb-label">Category</span>
+  <div class="cat-chips" id="catChips"></div>
+
+  <div class="fb-sep"></div>
+
+  <!-- Damage Number dropdown -->
+  <span class="fb-label">Damage No.</span>
+  <select class="fb-select" id="filterDamage"><option value="">All Damage No.</option></select>
+
+  <!-- Road Name dropdown -->
+  <span class="fb-label">Road</span>
+  <select class="fb-select" id="filterRoad"><option value="">All Roads</option></select>
+
+  <!-- PM dropdown -->
+  <span class="fb-label">PM</span>
+  <select class="fb-select" id="filterPM"><option value="">All PMs</option></select>
+
+  <button class="clear-btn" onclick="clearFilters()">✕ Clear filters</button>
+
+  <!-- Connection badge pushed to far right -->
+  <div style="margin-left:auto;display:flex;align-items:center;">
+    <div class="conn-badge">
+      <div class="conn-dot"></div>
+      <span id="connLabel">Demo data</span>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="side">
+    <div id="sideList"></div>
+  </div>
+
+  <div id="splitter"></div>
+
+  <div id="mapArea">
+    <button id="paneToggle" onclick="togglePane()" title="Collapse / expand panel">
+      <span class="arrow">‹</span>
+    </button>
+    <div id="azureMap"></div>
+    <button onclick="fitAll()" title="Fit all pins" style="position:absolute;bottom:120px;right:14px;z-index:10;width:32px;height:32px;background:#fff;border:1px solid rgba(0,0,0,0.14);border-radius:6px;font-size:16px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;">⊡</button>
+    <div id="legend">
+      <div class="leg-title">Category</div>
+      <div class="leg-row"><div class="leg-swatch" style="background:#22C55E"></div>IRW — Immediate Repair Works</div>
+      <div class="leg-row"><div class="leg-swatch" style="background:#F97316"></div>EW — Emergency Works</div>
+      <div class="leg-row"><div class="leg-swatch" style="background:#8B5CF6"></div>EPAR — Emergency Protective Action</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+const AZURE_KEY='DTXUfyEzWP2xb64BDnP2NCE3qdKRl4rLskMDwixH83RcsbBkbMV4JQQJ99CFACYeBjFofH37AAAgAZMP144l';
+
+/* ── CATEGORY CONFIG ── */
+const CAT_CFG={
+  'IRW': {c:'#22C55E',glow:'rgba(34,197,94,.5)',   l:'rgba(34,197,94,.12)',  label:'Immediate Repair Works'},
+  'EW':  {c:'#F97316',glow:'rgba(249,115,22,.5)',  l:'rgba(249,115,22,.12)', label:'Emergency Works'},
+  'EPAR':{c:'#8B5CF6',glow:'rgba(139,92,246,.5)',  l:'rgba(139,92,246,.12)', label:'Emerg. Protective Action'},
+};
+const cc=cat=>(CAT_CFG[cat]||{c:'#7A8BA8'}).c;
+const cl=cat=>(CAT_CFG[cat]||{l:'rgba(0,0,0,.05)'}).l;
+
+/* ── ROAD TYPE CONFIG ── */
+const RT_CFG={
+  'Local Road':      {icon:'🛤️'},
+  'State Road':      {icon:'🛣️'},
+  'Regional Road':   {icon:'🗺️'},
+  'Council Road':    {icon:'🏘️'},
+  'Unsealed Road':   {icon:'🪨'},
+};
+
+/* ── DEMO DATA ── */
+const DEMO=[
+  // ── EN0001 · EW ──
+  {eventNo:'EN0001',category:'EW',damageNumber:'DMG-001',damageDetails:'Pavement failure at creek crossing, 40m section',roadName:'Yarratt Rd',roadType:'Local Road',location:'Near Ellenborough River',chainageFrom:'0+450',chainageTo:'0+490',lat:-31.7841,lng:152.4023,parentID:'a1b2c3d4-0001-0000-0000-000000000001',recoverRef:'EW00001',pm:'Sarah Johnson'},
+  {eventNo:'EN0001',category:'EW',damageNumber:'DMG-002',damageDetails:'Shoulder erosion on embankment bend',roadName:'Yarratt Rd',roadType:'Local Road',location:'Yarratt Rd North Section',chainageFrom:'1+120',chainageTo:'1+160',lat:-31.7830,lng:152.3988,parentID:'a1b2c3d4-0001-0000-0000-000000000002',recoverRef:'EW00002',pm:'Sarah Johnson'},
+  {eventNo:'EN0001',category:'EW',damageNumber:'DMG-003',damageDetails:'Culvert outlet scour, pipe exposed',roadName:'Black Mountain Rd',roadType:'Regional Road',location:'South of Black Mountain',chainageFrom:'2+300',chainageTo:'2+340',lat:-31.9261,lng:152.1234,parentID:'a1b2c3d4-0001-0000-0000-000000000003',recoverRef:'EW00003',pm:'Tom Richards'},
+  {eventNo:'EN0001',category:'EW',damageNumber:'DMG-004',damageDetails:'Debris blockage at culvert inlet',roadName:'Black Mountain Rd',roadType:'Regional Road',location:'Black Mountain Creek',chainageFrom:'3+010',chainageTo:'3+030',lat:-31.9255,lng:152.1228,parentID:'a1b2c3d4-0001-0000-0000-000000000004',recoverRef:'EW00004',pm:'Tom Richards'},
+  {eventNo:'EN0001',category:'EW',damageNumber:'DMG-005',damageDetails:'Pavement deformation, rutting 80mm',roadName:'Comboyne Rd',roadType:'State Road',location:'Comboyne Township',chainageFrom:'5+600',chainageTo:'5+650',lat:-31.6020,lng:152.4610,parentID:'a1b2c3d4-0001-0000-0000-000000000005',recoverRef:'EW00005',pm:'Sarah Johnson'},
+
+  // ── EN0001 · IRW ──
+  {eventNo:'EN0001',category:'IRW',damageNumber:'DMG-006',damageDetails:'Landslip blocking carriageway — clearing required',roadName:'Comboyne Rd',roadType:'State Road',location:'Comboyne Plateau Approach',chainageFrom:'6+200',chainageTo:'6+250',lat:-31.6035,lng:152.4598,parentID:'a1b2c3d4-0001-0000-0000-000000000006',recoverRef:'DM00006',pm:'Sarah Johnson'},
+  {eventNo:'EN0001',category:'IRW',damageNumber:'DMG-007',damageDetails:'Flood scour on downstream road face',roadName:'Byabarra Rd',roadType:'Council Road',location:'Byabarra Bridge South',chainageFrom:'0+900',chainageTo:'0+940',lat:-31.5540,lng:152.5120,parentID:'a1b2c3d4-0001-0000-0000-000000000007',recoverRef:'DM00007',pm:'Tom Richards'},
+  {eventNo:'EN0001',category:'IRW',damageNumber:'DMG-008',damageDetails:'Table drain blockage causing seepage',roadName:'Byabarra Rd',roadType:'Council Road',location:'Byabarra Rd Midpoint',chainageFrom:'1+400',chainageTo:'1+440',lat:-31.5528,lng:152.5134,parentID:'a1b2c3d4-0001-0000-0000-000000000008',recoverRef:'DM00008',pm:'Tom Richards'},
+  {eventNo:'EN0001',category:'IRW',damageNumber:'DMG-009',damageDetails:'Road surface cracking and potholing',roadName:'Rawdon Island Rd',roadType:'Local Road',location:'Rawdon Island Causeway',chainageFrom:'0+100',chainageTo:'0+160',lat:-31.8530,lng:152.6801,parentID:'a1b2c3d4-0001-0000-0000-000000000009',recoverRef:'DM00009',pm:'Lisa Park'},
+  {eventNo:'EN0001',category:'IRW',damageNumber:'DMG-010',damageDetails:'Guardrail damage, 25m section',roadName:'Rawdon Island Rd',roadType:'Local Road',location:'Rawdon Island Bend',chainageFrom:'0+750',chainageTo:'0+775',lat:-31.8541,lng:152.6789,parentID:'a1b2c3d4-0001-0000-0000-000000000010',recoverRef:'DM00010',pm:'Lisa Park'},
+
+  // ── EN0001 · EPAR ──
+  {eventNo:'EN0001',category:'EPAR',damageNumber:'DMG-011',damageDetails:'Emergency berm protection — riverbank adjacent to road',roadName:'Lansdowne Rd',roadType:'Regional Road',location:'Lansdowne River Crossing',chainageFrom:'4+500',chainageTo:'4+540',lat:-31.7820,lng:152.5340,parentID:'a1b2c3d4-0001-0000-0000-000000000011',recoverRef:'DM00011',pm:'Lisa Park'},
+  {eventNo:'EN0001',category:'EPAR',damageNumber:'DMG-012',damageDetails:'Temporary diversion bunding required',roadName:'Lansdowne Rd',roadType:'Regional Road',location:'Lansdowne Floodplain',chainageFrom:'5+100',chainageTo:'5+130',lat:-31.7834,lng:152.5328,parentID:'a1b2c3d4-0001-0000-0000-000000000012',recoverRef:'DM00012',pm:'Lisa Park'},
+  {eventNo:'EN0001',category:'EPAR',damageNumber:'DMG-013',damageDetails:'Emergency sign installation — road closed ahead',roadName:'Wingham Rd',roadType:'State Road',location:'Wingham Township Entry',chainageFrom:'0+050',chainageTo:'0+060',lat:-31.8680,lng:152.3700,parentID:'a1b2c3d4-0001-0000-0000-000000000013',recoverRef:'DM00013',pm:'Sarah Johnson'},
+
+  // ── EN0002 · EW ──
+  {eventNo:'EN0002',category:'EW',damageNumber:'DMG-018',damageDetails:'Urgent road closure — slope failure',roadName:'Brimbin Rd',roadType:'Unsealed Road',location:'Brimbin State Forest',chainageFrom:'3+200',chainageTo:'3+260',lat:-31.9100,lng:152.5200,parentID:'b2c3d4e5-0002-0000-0000-000000000018',recoverRef:'EW00018',pm:'Tom Richards'},
+  {eventNo:'EN0002',category:'EW',damageNumber:'DMG-019',damageDetails:'Slip from uphill fill, carriageway blocked',roadName:'Brimbin Rd',roadType:'Unsealed Road',location:'Brimbin Ridge',chainageFrom:'4+010',chainageTo:'4+050',lat:-31.9112,lng:152.5212,parentID:'b2c3d4e5-0002-0000-0000-000000000019',recoverRef:'EW00019',pm:'Tom Richards'},
+  {eventNo:'EN0002',category:'EW',damageNumber:'DMG-020',damageDetails:'Flood inundation — 300m section below DFL',roadName:'Harrington Rd',roadType:'Local Road',location:'Harrington Estuary Flat',chainageFrom:'0+600',chainageTo:'0+900',lat:-31.8730,lng:152.6900,parentID:'b2c3d4e5-0002-0000-0000-000000000020',recoverRef:'EW00020',pm:'Sarah Johnson'},
+  {eventNo:'EN0002',category:'EW',damageNumber:'DMG-021',damageDetails:'Scour under road at creek outlet',roadName:'Harrington Rd',roadType:'Local Road',location:'Harrington Creek South',chainageFrom:'1+450',chainageTo:'1+480',lat:-31.8742,lng:152.6914,parentID:'b2c3d4e5-0002-0000-0000-000000000021',recoverRef:'EW00021',pm:'Sarah Johnson'},
+
+  // ── EN0002 · IRW ──
+  {eventNo:'EN0002',category:'IRW',damageNumber:'DMG-022',damageDetails:'Resheet damaged surface gravel, 200m',roadName:'Manning River Dr',roadType:'Council Road',location:'Manning River Dr North',chainageFrom:'7+800',chainageTo:'8+000',lat:-31.9050,lng:152.4950,parentID:'b2c3d4e5-0002-0000-0000-000000000022',recoverRef:'DM00022',pm:'Lisa Park'},
+  {eventNo:'EN0002',category:'IRW',damageNumber:'DMG-023',damageDetails:'Pothole patching — high-severity clusters',roadName:'Manning River Dr',roadType:'Council Road',location:'Manning River Dr South',chainageFrom:'9+100',chainageTo:'9+200',lat:-31.9062,lng:152.4964,parentID:'b2c3d4e5-0002-0000-0000-000000000023',recoverRef:'DM00023',pm:'Lisa Park'},
+  {eventNo:'EN0002',category:'IRW',damageNumber:'DMG-024',damageDetails:'Culvert headwall collapse',roadName:'Johns River Rd',roadType:'Local Road',location:'Johns River Township',chainageFrom:'2+300',chainageTo:'2+330',lat:-31.5210,lng:152.5550,parentID:'b2c3d4e5-0002-0000-0000-000000000024',recoverRef:'DM00024',pm:'Sarah Johnson'},
+  {eventNo:'EN0002',category:'IRW',damageNumber:'DMG-025',damageDetails:'Side entry pit blocked — flooding risk',roadName:'Johns River Rd',roadType:'Local Road',location:'Johns River South',chainageFrom:'3+600',chainageTo:'3+620',lat:-31.5225,lng:152.5562,parentID:'b2c3d4e5-0002-0000-0000-000000000025',recoverRef:'DM00025',pm:'Sarah Johnson'},
+
+  // ── EN0002 · EPAR ──
+  {eventNo:'EN0002',category:'EPAR',damageNumber:'DMG-026',damageDetails:'Sandbag deployment along road edge',roadName:'Coopernook Rd',roadType:'Council Road',location:'Coopernook Levee Bank',chainageFrom:'0+200',chainageTo:'0+350',lat:-31.8400,lng:152.5900,parentID:'b2c3d4e5-0002-0000-0000-000000000026',recoverRef:'DM00026',pm:'Tom Richards'},
+  {eventNo:'EN0002',category:'EPAR',damageNumber:'DMG-027',damageDetails:'Emergency speed restriction — damaged road surface',roadName:'Coopernook Rd',roadType:'Council Road',location:'Coopernook West',chainageFrom:'1+100',chainageTo:'1+200',lat:-31.8415,lng:152.5880,parentID:'b2c3d4e5-0002-0000-0000-000000000027',recoverRef:'DM00027',pm:'Tom Richards'},
+  {eventNo:'EN0002',category:'EPAR',damageNumber:'DMG-028',damageDetails:'Temporary traffic management — single lane',roadName:'Tinonee Rd',roadType:'Local Road',location:'Tinonee Bridge',chainageFrom:'0+050',chainageTo:'0+120',lat:-31.9330,lng:152.4500,parentID:'b2c3d4e5-0002-0000-0000-000000000028',recoverRef:'DM00028',pm:'Lisa Park'},
+
+];
+
+/* ── NORMALISE ── maps both Dataverse cr8fb_ logical names AND friendly camelCase keys ── */
+function normalise(raw){
+  // Accept either Dataverse logical name or friendly camelCase fallback
+  function g(logical, friendly){
+    if(raw[logical]!==undefined&&raw[logical]!==null) return raw[logical];
+    if(friendly&&raw[friendly]!==undefined&&raw[friendly]!==null) return raw[friendly];
+    // lowercase fallback
+    const lk=logical.toLowerCase();
+    if(raw[lk]!==undefined&&raw[lk]!==null) return raw[lk];
+    return undefined;
+  }
+  const dmgNo = g('cr8fb_Recover_Damange_Number','damageNumber') || '';
+  return {
+    eventNo:      g('cr8fb_AGRN_No',            'eventNo')      || '',
+    category:     g('cr8fb_Work_Register_Name', 'category')     || '',
+    damageNumber: dmgNo,
+    damageDetails:g('cr8fb_ROAD_Class',         'damageDetails')|| '',
+    roadName:     g('cr8fb_Road_Name',          'roadName')     || '',
+    roadType:     g('cr8fb_AssetType',          'roadType')     || '',
+    location:     g('cr8fb_cr8fb_LocationLevel1','location')    || '',
+    lat:          parseFloat(g('cr8fb_Latitude',  'lat')||0),
+    lng:          parseFloat(g('cr8fb_Longitude', 'lng')||0),
+    parentID:     g('cr8fb_PROJECTSId',         'parentID')     || '',
+    recoverRef:   dmgNo,   // Recover Ref = Damage Number per spec
+    pm:           g('cr8fb_PM',                 'pm')           || '',
+  };
+}
+
+/* ── STATE ── */
+let records=[], activeEvent='EN0001', activeCategory=null, filterDamage='', filterRoad='', filterPM='';
+let azMap=null, popup=null, markers=[];
+const groupOpen={};
+const CAT_KEYS=['IRW','EW','EPAR'];
+let EVENT_KEYS=['EN0001','EN0002'];
+
+/* ── LOAD FROM HASH ── */
+function loadFromHash(){
+  try{
+    const h=window.location.hash; if(!h||h.length<2)return false;
+    const p=JSON.parse(decodeURIComponent(h.substring(1)));
+    if(!Array.isArray(p)||!p.length)return false;
+    const _all=p.map(normalise);
+    records=_all.filter(r=>r.lat!==0&&r.lng!==0&&!isNaN(r.lat)&&!isNaN(r.lng));
+    const _sk=_all.length-records.length;
+    // Derive event keys from real data, sorted
+    const evKeys=[...new Set(records.map(r=>r.eventNo).filter(Boolean))].sort();
+    if(evKeys.length) EVENT_KEYS.splice(0,EVENT_KEYS.length,...evKeys);
+    activeEvent=EVENT_KEYS[0]||'';
+    document.getElementById('connLabel').textContent='Dataverse ('+records.length+' records'+(_sk?' · '+_sk+' no GPS':'')+')';
+    return true;
+  }catch(e){console.error('loadFromHash:',e);return false;}
+}
+
+/* ── STATS BAR ── */
+function renderStats(){}
+
+/* ── EVENT TABS ── */
+function buildEventTabs(){
+  document.getElementById('eventTabs').innerHTML=EVENT_KEYS.map(ev=>`
+    <button class="event-tab${activeEvent===ev?' active':''}" onclick="setEvent('${ev}')">${ev}</button>
+  `).join('');
+}
+function setEvent(ev){
+  activeEvent=ev; activeCategory=null; filterDamage=''; filterRoad=''; filterPM='';
+  document.getElementById('filterDamage').value='';
+  document.getElementById('filterRoad').value='';
+  document.getElementById('filterPM').value='';
+  Object.keys(groupOpen).forEach(k=>{groupOpen[k]=false;});
+  buildEventTabs(); buildCatChips(); populateDropdowns();
+  renderStats(); renderList(); updatePins(); setTimeout(fitAll,100);
+  if(popup)popup.close();
+}
+
+/* ── CATEGORY CHIPS ── */
+function buildCatChips(){
+  document.getElementById('catChips').innerHTML=CAT_KEYS.map(cat=>{
+    const col=cc(cat), isAct=activeCategory===cat;
+    return `<button class="chip${isAct?' active':''}"
+      style="border-color:${col}55;color:${isAct?'#fff':col};background:${isAct?col:'#fff'};${isAct?`box-shadow:0 0 10px ${col}44`:''}"
+      onclick="setCat('${cat}')">
+      <span class="dot" style="background:${col}"></span>${cat}</button>`;
+  }).join('');
+}
+function setCat(cat){
+  activeCategory=activeCategory===cat?null:cat;
+  Object.keys(groupOpen).forEach(k=>{groupOpen[k]=false;});
+  buildCatChips(); if(popup)popup.close(); renderList(); updatePins(); setTimeout(fitAll,100);
+}
+
+/* ── DROPDOWNS ── */
+function populateDropdowns(){
+  const base=records.filter(r=>r.eventNo===activeEvent);
+  const damages=[...new Set(base.map(r=>r.damageNumber).filter(Boolean))].sort();
+  const roads=[...new Set(base.map(r=>r.roadName).filter(Boolean))].sort();
+  const pms=[...new Set(base.map(r=>r.pm).filter(Boolean))].sort();
+  const dS=document.getElementById('filterDamage'), rS=document.getElementById('filterRoad'), pS=document.getElementById('filterPM');
+  const cd=dS.value, cr=rS.value, cp=pS.value;
+  dS.innerHTML='<option value="">All Damage No.</option>'+damages.map(v=>`<option value="${v}">${v}</option>`).join('');
+  rS.innerHTML='<option value="">All Roads</option>'+roads.map(v=>`<option value="${v}">${v}</option>`).join('');
+  pS.innerHTML='<option value="">All PMs</option>'+pms.map(v=>`<option value="${v}">${v}</option>`).join('');
+  if(damages.includes(cd))dS.value=cd; if(roads.includes(cr))rS.value=cr; if(pms.includes(cp))pS.value=cp;
+}
+function clearFilters(){
+  activeCategory=null; filterDamage=''; filterRoad=''; filterPM='';
+  document.getElementById('filterDamage').value='';
+  document.getElementById('filterRoad').value='';
+  document.getElementById('filterPM').value='';
+  Object.keys(groupOpen).forEach(k=>{groupOpen[k]=false;});
+  buildCatChips(); if(popup)popup.close(); renderList(); updatePins(); setTimeout(fitAll,100);
+}
+
+/* ── FILTER ── */
+function getFiltered(){
+  return records.filter(r=>{
+    if(r.eventNo!==activeEvent)return false;
+    if(activeCategory&&r.category!==activeCategory)return false;
+    if(filterDamage&&r.damageNumber!==filterDamage)return false;
+    if(filterRoad&&r.roadName!==filterRoad)return false;
+    if(filterPM&&r.pm!==filterPM)return false;
+    return true;
+  });
+}
+
+/* ── SIDE LIST ── */
+function renderList(){
+  const vis=getFiltered();
+  const groups={};
+  vis.forEach(r=>{const k=r.roadName||'Unknown';if(!groups[k])groups[k]=[];groups[k].push(r);});
+  document.getElementById('sideList').innerHTML=Object.entries(groups).map(([road,items])=>{
+    if(groupOpen[road]===undefined)groupOpen[road]=false;
+    const isOpen=groupOpen[road];
+    const safeId='grp_'+road.replace(/[^a-z0-9]/gi,'_');
+    const bh=items.length*82+8;
+    const rows=items.map(r=>{
+      const col=cc(r.category), bg=cl(r.category), gi=records.indexOf(r);
+      return `<div class="list-item" id="li-${gi}" onclick="flyToRecord(${gi})" style="--accent:${col}">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${col};border-radius:0 2px 2px 0;opacity:0" class="li-bar"></div>
+        <div class="li-text">
+          <div class="li-name" style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:${bg};color:${col};flex-shrink:0;">${r.category}</span>
+            ${r.damageNumber} · ${r.roadName}
+          </div>
+          <div class="li-sub">${r.location||'—'}</div>
+          <div class="li-detail">${r.roadType||''}</div>
+          ${r.pm?`<div class="li-detail" style="color:var(--text);opacity:.6">👤 ${r.pm}</div>`:''}
+          ${r.damageDetails?`<div class="li-detail" style="color:var(--text);opacity:.7">${r.damageDetails}</div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="group-header" data-road="${road.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" data-safe="${safeId}" onclick="toggleGroup(this)">
+      <span class="group-chevron${isOpen?' open':''}">▶</span>
+      <span class="group-name">${road}</span>
+      <span class="group-count">${items.length}</span>
+    </div>
+    <div class="group-body${isOpen?'':' collapsed'}" id="${safeId}" style="max-height:${isOpen?bh:0}px">${rows}</div>`;
+  }).join('');
+  // Attach list-item hover bar styles
+  document.querySelectorAll('.list-item').forEach(el=>{
+    const bar=el.querySelector('.li-bar');
+    if(bar){el.addEventListener('mouseenter',()=>{bar.style.opacity='1';});el.addEventListener('mouseleave',()=>{if(!el.classList.contains('active'))bar.style.opacity='0';});}
+  });
+}
+
+function toggleGroup(h){
+  const road=h.dataset.road;
+  const safeId=h.dataset.safe||('grp_'+road.replace(/[^a-z0-9]/gi,'_'));
+  groupOpen[road]=!groupOpen[road];
+  const isOpen=groupOpen[road];
+  h.querySelector('.group-chevron').classList.toggle('open',isOpen);
+  const body=document.getElementById(safeId);
+  if(!body)return;
+  const bh=body.querySelectorAll('.list-item').length*82+8;
+  body.style.maxHeight=isOpen?bh+'px':'0px';
+  body.classList.toggle('collapsed',!isOpen);
+}
+
+function highlightList(r){
+  document.querySelectorAll('.list-item').forEach(el=>{
+    el.classList.remove('active');
+    const bar=el.querySelector('.li-bar');if(bar)bar.style.opacity='0';
+  });
+  const road=r.roadName||'Unknown';
+  if(!groupOpen[road]){groupOpen[road]=true;renderList();}
+  const idx=records.indexOf(r);
+  const el=document.getElementById(`li-${idx}`);
+  if(el){
+    el.classList.add('active');
+    const bar=el.querySelector('.li-bar');if(bar)bar.style.opacity='1';
+    el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+}
+
+/* ── POPUP HTML ── */
+function popupHtml(r){
+  const col=cc(r.category);
+  const staticUrl=`https://atlas.microsoft.com/map/static?api-version=2024-04-01&tilesetId=microsoft.base.hybrid.road&zoom=15&center=${r.lng},${r.lat}&width=280&height=120&language=en-AU&subscription-key=${AZURE_KEY}`;
+  const imgHtml=`<img class="pop-img" src="${staticUrl}" alt="location preview" style="height:120px;object-fit:cover;" onerror="this.outerHTML='<div class=pop-img-ph>📍</div>'">`;
+  const lat=r.lat.toFixed(6), lng=r.lng.toFixed(6);
+  const googleUrl=`https://www.google.com/maps?q=${lat},${lng}`;
+  const appleUrl=`https://maps.apple.com/?ll=${lat},${lng}&q=${encodeURIComponent(r.roadName||r.damageNumber)}`;
+
+  // Build Recover NSW link based on category and parentID
+  let recoverLinkHtml='';
+  if(r.parentID){
+    let recoverUrl='';
+    if(r.category==='EW'){
+      recoverUrl=`https://recover-nsw.civicagov.com/EmergentWorks/ListView?q=${r.parentID}&stq=${r.recoverRef||''}&e=${r.parentID}`;
+    } else if(r.category==='IRW'||r.category==='EPAR'){
+      recoverUrl=`https://recover-nsw.civicagov.com/Damages/ListView?q=${r.parentID}&stq=${r.recoverRef||''}&e=${r.parentID}`;
+    } else if(r.category==='RW'){
+      recoverUrl=`https://recover-nsw.civicagov.com/Damages/ListView?q=${r.parentID}&stq=${r.recoverRef||''}&e=${r.parentID}`;
+    }
+    if(recoverUrl){
+      recoverLinkHtml=`<div style="padding:0 16px 10px;">
+        <a class="pop-map-btn recover" href="${recoverUrl}" target="_blank" rel="noopener" style="flex:1;background:#f0fdf4;border-color:#86efac;color:#166534;">
+          <svg viewBox="0 0 14 14" fill="none" style="width:14px;height:14px;flex-shrink:0"><path d="M7 1C3.69 1 1 3.69 1 7s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z" stroke="#166534" stroke-width="1.2"/><path d="M4.5 7h5M9.5 7L7.5 5M9.5 7L7.5 9" stroke="#166534" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          View in Recover &nbsp;<span style="font-size:10px;opacity:.7;">${r.recoverRef||r.damageNumber}</span>
+        </a>
+      </div>`;
+    }
+  }
+
+  return `<div class="pop-inner">
+    <div class="pop-accent-bar" style="background:linear-gradient(90deg,${col},${col}88)"></div>
+    <div class="pop-head">
+      <div class="pop-eyebrow" style="color:${col}">${r.eventNo} &nbsp;·&nbsp; ${r.category} — ${(CAT_CFG[r.category]||{label:r.category}).label}</div>
+      <div class="pop-title">${r.roadName||'—'}</div>
+      <div class="pop-sub">${r.damageNumber} · ${r.location||''}</div>
+    </div>
+    ${imgHtml}
+    <div class="pop-body">
+      <div class="pop-field"><div class="pop-fkey">Damage No.</div><div class="pop-fval">${r.damageNumber}</div></div>
+      <div class="pop-field"><div class="pop-fkey">Road Type</div><div class="pop-fval">${r.roadType||'—'}</div></div>
+      <div class="pop-field full"><div class="pop-fkey">Location</div><div class="pop-fval">${r.location||'—'}</div></div>
+      <div class="pop-field full"><div class="pop-fkey">Damage Details</div><div class="pop-fval">${r.damageDetails||'—'}</div></div>
+      ${r.pm?`<div class="pop-field full"><div class="pop-fkey">Project Manager</div><div class="pop-fval">${r.pm}</div></div>`:''}
+      <div class="pop-field"><div class="pop-fkey">Latitude</div><div class="pop-fval">${r.lat.toFixed(6)}</div></div>
+      <div class="pop-field"><div class="pop-fkey">Longitude</div><div class="pop-fval">${r.lng.toFixed(6)}</div></div>
+    </div>
+    ${recoverLinkHtml}
+    <div class="pop-map-links">
+      <a class="pop-map-btn apple" href="${appleUrl}" target="_blank" rel="noopener">
+        <svg viewBox="0 0 14 14" fill="none"><path d="M7 1C3.69 1 1 3.69 1 7s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 1.5A4.5 4.5 0 1 1 7 11.5 4.5 4.5 0 0 1 7 2.5zm0 1a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm.5 1.5v2.29l1.35 1.36-.7.7L6.5 7.71V5h1z" fill="currentColor"/></svg>
+        Apple Maps
+      </a>
+      <a class="pop-map-btn google" href="${googleUrl}" target="_blank" rel="noopener">
+        <svg viewBox="0 0 14 14" fill="none"><path d="M7 1C4.24 1 2 3.24 2 6c0 3.75 5 8 5 8s5-4.25 5-8c0-2.76-2.24-5-5-5zm0 6.5A1.5 1.5 0 1 1 7 4a1.5 1.5 0 0 1 0 3z" fill="currentColor"/></svg>
+        Google Maps
+      </a>
+    </div>
+  </div>`;
+}
+
+/* ── PIN SVG ── */
+function pinSvg(col){
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42"
+    style="filter:drop-shadow(0 2px 3px ${col}88);display:block;">
+    <path d="M16 2C8.3 2 2 8.3 2 16c0 10 14 24 14 24s14-14 14-24C30 8.3 23.7 2 16 2z" fill="${col}"/>
+    <circle cx="16" cy="16" r="7" fill="rgba(255,255,255,0.92)"/>
+  </svg>`;
+}
+
+/* ── AZURE MAP INIT ── */
+function initMap(){
+  azMap=new atlas.Map('azureMap',{
+    center:[152.45,-31.75],
+    zoom:9,
+    style:'satellite_road_labels',
+    authOptions:{authType:'subscriptionKey',subscriptionKey:AZURE_KEY},
+    language:'en-AU',
+  });
+  azMap.events.add('ready',()=>{
+    popup=new atlas.Popup({
+      pixelOffset:[0,-44],
+      closeButton:true,
+      fillColor:'transparent',
+      strokeColor:'transparent',
+    });
+    updatePins();
+  });
+}
+
+/* ── UPDATE PINS ── */
+function updatePins(){
+  if(!azMap)return;
+  markers.forEach(m=>azMap.markers.remove(m.marker||m));
+  markers=[];
+  const vis=getFiltered();
+  vis.forEach((r,i)=>{
+    const col=cc(r.category);
+    const markerId='pin-'+i;
+    const htmlStr=`<div id="${markerId}" style="cursor:pointer;display:block;">
+      <div class="pin-inner" style="display:block;transition:filter .15s;">${pinSvg(col)}</div>
+    </div>`;
+    const marker=new atlas.HtmlMarker({htmlContent:htmlStr,position:[r.lng,r.lat],anchor:'bottom'});
+    azMap.markers.add(marker);
+    markers.push({marker,record:r});
+    azMap.events.add('click',marker,()=>{
+      popup.setOptions({content:`<div class="azure-popup">${popupHtml(r)}</div>`,position:[r.lng,r.lat]});
+      popup.open(azMap);
+      highlightList(r);
+      postUp({type:'PIN_CLICK',damageNumber:r.damageNumber,category:r.category,eventNo:r.eventNo,lat:r.lat,lng:r.lng});
+    });
+    azMap.events.add('mouseenter',marker,()=>{
+      const el=marker.getElement();if(el){const inner=el.querySelector('.pin-inner');if(inner)inner.style.filter='brightness(1.2)';}
+    });
+    azMap.events.add('mouseleave',marker,()=>{
+      const el=marker.getElement();if(el){const inner=el.querySelector('.pin-inner');if(inner)inner.style.filter='';}
+    });
+  });
+}
+
+/* ── FIT ALL ── */
+function fitAll(){
+  const vis=getFiltered(); if(!vis.length||!azMap)return;
+  const lats=vis.map(r=>r.lat), lngs=vis.map(r=>r.lng);
+  const west=Math.min(...lngs), east=Math.max(...lngs);
+  const south=Math.min(...lats), north=Math.max(...lats);
+  const centerLng=(west+east)/2, centerLat=(south+north)/2;
+  const dlng=(east-west)||0.001, dlat=(north-south)||0.001;
+  const mapW=(document.getElementById('mapArea').offsetWidth)||900;
+  const mapH=(document.getElementById('mapArea').offsetHeight)||600;
+  const zLng=Math.log2(mapW*360/(dlng*256*1.5));
+  const zLat=Math.log2(mapH*170/(dlat*256*1.5));
+  let zoom=Math.floor(Math.min(zLng,zLat));
+  const isFiltered=(activeCategory||filterDamage||filterRoad);
+  zoom=Math.min(16,Math.max(isFiltered?13:7,zoom));
+  azMap.setCamera({center:[centerLng,centerLat],zoom,duration:800,type:'fly'});
+}
+
+/* ── FLY TO RECORD ── */
+function flyToRecord(idx){
+  const r=records[idx]; if(!r||!azMap)return;
+  azMap.setCamera({center:[r.lng,r.lat],zoom:14,duration:800,type:'fly'});
+  setTimeout(()=>{
+    popup.setOptions({content:`<div class="azure-popup">${popupHtml(r)}</div>`,position:[r.lng,r.lat]});
+    popup.open(azMap);
+    highlightList(r);
+  },900);
+}
+
+/* ── PANE TOGGLE ── */
+function togglePane(){
+  const side=document.getElementById('side');
+  const spl=document.getElementById('splitter');
+  const isCollapsed=side.classList.toggle('collapsed');
+  document.body.classList.toggle('pane-collapsed',isCollapsed);
+  spl.style.display=isCollapsed?'none':'flex';
+  setTimeout(()=>{if(azMap)azMap.resize();},300);
+}
+
+/* ── SPLITTER DRAG ── */
+(()=>{
+  const splitter=document.getElementById('splitter');
+  const side=document.getElementById('side');
+  let dragging=false, startX=0, startW=0;
+  const MIN_W=120, MAX_W=520;
+  splitter.addEventListener('mousedown',e=>{dragging=true;startX=e.clientX;startW=side.offsetWidth;splitter.classList.add('dragging');document.body.style.cursor='col-resize';document.body.style.userSelect='none';e.preventDefault();});
+  document.addEventListener('mousemove',e=>{if(!dragging)return;const dx=e.clientX-startX;const newW=Math.min(MAX_W,Math.max(MIN_W,startW+dx));side.style.width=newW+'px';if(azMap)azMap.resize();});
+  document.addEventListener('mouseup',()=>{if(!dragging)return;dragging=false;splitter.classList.remove('dragging');document.body.style.cursor='';document.body.style.userSelect='';if(azMap)azMap.resize();});
+})();
+
+/* ── postMessage → Power Apps ── */
+function postUp(obj){try{window.parent.postMessage(JSON.stringify(obj),'*');}catch(e){}}
+
+/* ── EVENT LISTENERS ── */
+document.getElementById('filterDamage').addEventListener('change',function(){filterDamage=this.value;renderList();updatePins();setTimeout(fitAll,150);});
+document.getElementById('filterRoad').addEventListener('change',function(){filterRoad=this.value;renderList();updatePins();setTimeout(fitAll,150);});
+document.getElementById('filterPM').addEventListener('change',function(){filterPM=this.value;renderList();updatePins();setTimeout(fitAll,150);});
+window.addEventListener('hashchange',()=>{if(loadFromHash()){buildEventTabs();buildCatChips();populateDropdowns();renderStats();renderList();updatePins();fitAll();}});
+
+/* ── BOOT ── */
+if(!loadFromHash()){
+  const _all=DEMO.map(normalise);
+  records=_all.filter(r=>r.lat!==0&&r.lng!==0&&!isNaN(r.lat)&&!isNaN(r.lng));
+  document.getElementById('connLabel').textContent='Demo · '+records.length+' records';
+}
+buildEventTabs(); buildCatChips(); populateDropdowns(); renderStats(); renderList();
+// Default collapsed side pane
+(()=>{
+  const side=document.getElementById('side');
+  const spl=document.getElementById('splitter');
+  side.classList.add('collapsed');
+  document.body.classList.add('pane-collapsed');
+  spl.style.display='none';
+})();
+postUp({type:'READY'});
+window.__bootDone=true;
+if(window.__atlasReady){initMap();}
+else{const t=setInterval(()=>{if(typeof atlas!=='undefined'){clearInterval(t);initMap();}},50);}
+</script>
+</body>
+</html>
