@@ -58,9 +58,17 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;background:#fff
 /* ── SIDE PANEL ── */
 #side{width:320px;flex-shrink:0;background:#f5f7fa;border-right:1px solid var(--rim2);display:flex;flex-direction:column;transition:width .28s cubic-bezier(.4,0,.2,1);min-width:0;overflow:hidden;position:relative}
 #side.collapsed{width:0!important;border-right:none}
-#sideHeader{padding:10px 14px 6px;background:#f5f7fa;border-bottom:1px solid var(--rim);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+#sideHeader{padding:10px 14px 8px;background:#f5f7fa;border-bottom:1px solid var(--rim);display:flex;flex-direction:column;gap:8px;flex-shrink:0;}
+#sideHeaderTop{display:flex;align-items:center;justify-content:space-between;}
 #sideHeader .sh-count{font-size:13px;font-weight:700;color:var(--text)}
 #sideHeader .sh-sort{font-size:11px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:4px}
+#sideSearch{display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--rim2);border-radius:8px;padding:5px 10px;transition:border-color .15s;}
+#sideSearch:focus-within{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.1);}
+#sideSearch svg{flex-shrink:0;color:#9ca3af;}
+#sideSearchInput{border:none;outline:none;font-family:inherit;font-size:12px;color:var(--text);background:transparent;width:100%;min-width:0;}
+#sideSearchInput::placeholder{color:#9ca3af;}
+#sideSearchClear{background:none;border:none;cursor:pointer;color:#9ca3af;font-size:14px;padding:0;line-height:1;display:none;flex-shrink:0;}
+#sideSearchClear:hover{color:#1a1a2e;}
 #sideList{flex:1;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:0}
 #sideList::-webkit-scrollbar{width:3px}
 #sideList::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:2px}
@@ -186,7 +194,7 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
   <!-- Has Damage No. checkbox -->
   <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;user-select:none;">
     <input type="checkbox" id="hasDamageBtn" checked onchange="toggleHasDamage()" style="width:14px;height:14px;cursor:pointer;accent-color:#1a1a2e;">
-    Damage No. only
+    Show all Roads with DM No.
   </label>
 
   <!-- Connection badge pushed to far right -->
@@ -202,8 +210,15 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
 <div id="main">
   <div id="side">
     <div id="sideHeader">
-      <span class="sh-count" id="sideCount">0 records</span>
-      <span class="sh-sort">Sort by: Recently Updated ▾</span>
+      <div id="sideHeaderTop">
+        <span class="sh-count" id="sideCount">0 records</span>
+        <span class="sh-sort">Sort by: Recently Updated ▾</span>
+      </div>
+      <div id="sideSearch">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M9 9l2.5 2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <input id="sideSearchInput" type="text" placeholder="Search damage no., road, location…" oninput="onSearch(this.value)" />
+        <button id="sideSearchClear" onclick="clearSearch()" title="Clear">✕</button>
+      </div>
     </div>
     <div id="sideList"></div>
     <div id="sideFooter">
@@ -223,12 +238,6 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
     <div id="azureMap"></div>
     <div id="floatPopup"><button class="pop-close" onclick="closeFloatPopup()">✕</button><div id="floatPopupInner"></div></div>
     <button onclick="fitAll()" title="Fit all pins" style="position:absolute;bottom:120px;right:14px;z-index:10;width:32px;height:32px;background:#fff;border:1px solid rgba(0,0,0,0.14);border-radius:6px;font-size:16px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;">⊡</button>
-    <div id="legend">
-      <div class="leg-title">Category</div>
-      <div class="leg-row"><div class="leg-swatch" style="background:#22C55E"></div>IRW — Immediate Repair Works</div>
-      <div class="leg-row"><div class="leg-swatch" style="background:#F97316"></div>EW — Emergency Works</div>
-      <div class="leg-row"><div class="leg-swatch" style="background:#8B5CF6"></div>EPAR — Emergency Protective Action</div>
-    </div>
   </div>
 </div>
 </div>
@@ -325,7 +334,7 @@ function normalise(raw){
 }
 
 /* ── STATE ── */
-let records=[], activeEvent='EN0001', activeCategory=null, filterDamage='', filterRoad='', filterPM='', filterHasDamage=true;
+let records=[], activeEvent='EN0001', activeCategory=null, filterDamage='', filterRoad='', filterPM='', filterHasDamage=true, filterSearch='';
 let azMap=null, popup=null, markers=[];
 const groupOpen={};
 const CAT_KEYS=['IRW','EW','EPAR'];
@@ -343,7 +352,7 @@ function loadFromHash(){
     // Derive event keys from real data, sorted
     const evKeys=[...new Set(records.map(r=>r.eventNo).filter(Boolean))].sort();
     if(evKeys.length) EVENT_KEYS.splice(0,EVENT_KEYS.length,...evKeys);
-    activeEvent=EVENT_KEYS[0]||'';
+    activeEvent=EVENT_KEYS[EVENT_KEYS.length-1]||'';
     document.getElementById('connLabel').textContent='Dataverse';    return true;
   }catch(e){console.error('loadFromHash:',e);return false;}
 }
@@ -397,14 +406,30 @@ function populateDropdowns(){
   pS.innerHTML='<option value="">All PMs</option>'+pms.map(v=>`<option value="${v}">${v}</option>`).join('');
   if(damages.includes(cd))dS.value=cd; if(roads.includes(cr))rS.value=cr; if(pms.includes(cp))pS.value=cp;
 }
+function onSearch(val){
+  filterSearch=val.trim();
+  const clearBtn=document.getElementById('sideSearchClear');
+  if(clearBtn) clearBtn.style.display=filterSearch?'block':'none';
+  renderList(); updatePins(); setTimeout(fitAll,150);
+}
+function clearSearch(){
+  filterSearch='';
+  const inp=document.getElementById('sideSearchInput');
+  const clearBtn=document.getElementById('sideSearchClear');
+  if(inp) inp.value='';
+  if(clearBtn) clearBtn.style.display='none';
+  renderList(); updatePins(); setTimeout(fitAll,150);
+}
 function clearFilters(){
-  activeCategory=null; filterDamage=''; filterRoad=''; filterPM=''; filterHasDamage=true;
+  activeCategory=null; filterDamage=''; filterRoad=''; filterPM=''; filterHasDamage=true; filterSearch='';
   document.getElementById('filterDamage').value='';
   document.getElementById('filterRoad').value='';
   document.getElementById('filterPM').value='';
+  const _si=document.getElementById('sideSearchInput'); if(_si)_si.value='';
+  const _sc=document.getElementById('sideSearchClear'); if(_sc)_sc.style.display='none';
   updateHasDamageBtn();
   Object.keys(groupOpen).forEach(k=>{groupOpen[k]=false;});
-  buildCatChips(); if(popup)popup.close(); renderList(); updatePins(); setTimeout(fitAll,100);
+  buildCatChips(); if(popup)popup.close(); closeFloatPopup(); renderList(); updatePins(); setTimeout(fitAll,100);
 }
 function toggleHasDamage(){
   filterHasDamage=document.getElementById('hasDamageBtn').checked;
@@ -417,6 +442,7 @@ function updateHasDamageBtn(){
 
 /* ── FILTER ── */
 function getFiltered(){
+  const q=filterSearch.toLowerCase();
   return records.filter(r=>{
     if(r.eventNo!==activeEvent)return false;
     if(filterHasDamage&&!r.damageNumber)return false;
@@ -424,6 +450,7 @@ function getFiltered(){
     if(filterDamage&&r.damageNumber!==filterDamage)return false;
     if(filterRoad&&r.roadName!==filterRoad)return false;
     if(filterPM&&r.pm!==filterPM)return false;
+    if(q&&![r.damageNumber,r.roadName,r.location,r.pm].some(v=>(v||'').toLowerCase().includes(q)))return false;
     return true;
   });
 }
@@ -474,7 +501,7 @@ function renderList(){
         </div>
         <div style="margin-bottom:5px"><span class="card-status" style="background:${sc.bg};color:${sc.color}">${sc.label}</span></div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">📍 ${r.location||'—'}</div>
-        <div class="card-desc">${r.damageDetails||'—'}</div>
+        <div class="card-desc">👤 ${r.pm||'—'}</div>
         <div class="card-meta">
           <span class="card-date">${r.modifiedOn?'Updated '+fmtDate(r.modifiedOn):'—'}</span>
           <span class="card-badges">
@@ -758,16 +785,31 @@ function togglePane(){
 /* ── postMessage → Power Apps ── */
 function postUp(obj){try{window.parent.postMessage(JSON.stringify(obj),'*');}catch(e){}}
 
+/* ── RELOAD DATA ── called whenever hash changes ── */
+function reloadData(){
+  if(loadFromHash()){
+    buildEventTabs(); buildCatChips(); populateDropdowns();
+    renderStats(); renderList(); updateHasDamageBtn(); updatePins();
+    setTimeout(fitAll,150);
+  }
+}
+
 /* ── EVENT LISTENERS ── */
 document.getElementById('filterDamage').addEventListener('change',function(){filterDamage=this.value;renderList();updatePins();setTimeout(fitAll,150);});
 document.getElementById('filterRoad').addEventListener('change',function(){filterRoad=this.value;renderList();updatePins();setTimeout(fitAll,150);});
 document.getElementById('filterPM').addEventListener('change',function(){filterPM=this.value;renderList();updatePins();setTimeout(fitAll,150);});
-window.addEventListener('hashchange',()=>{if(loadFromHash()){buildEventTabs();buildCatChips();populateDropdowns();renderStats();renderList();updatePins();fitAll();}});
+
+// Reload when Power Apps updates the iframe src
+window.addEventListener('hashchange', reloadData);
 
 /* ── BOOT ── */
 if(!loadFromHash()){
   const _all=DEMO.map(normalise);
   records=_all.filter(r=>r.lat!==0&&r.lng!==0&&!isNaN(r.lat)&&!isNaN(r.lng));
+  // Default to highest event number
+  const evKeys=[...new Set(records.map(r=>r.eventNo).filter(Boolean))].sort();
+  if(evKeys.length) EVENT_KEYS.splice(0,EVENT_KEYS.length,...evKeys);
+  activeEvent=EVENT_KEYS[EVENT_KEYS.length-1]||'';
   document.getElementById('connLabel').textContent='Demo';
 }
 buildEventTabs(); buildCatChips(); populateDropdowns(); renderStats(); renderList(); updateHasDamageBtn();
