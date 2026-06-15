@@ -38,19 +38,31 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;background:#fff
 .conn-dot{width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 8px rgba(16,185,129,.4);flex-shrink:0}
 
 /* ── FILTER BAR ── */
-#filterbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:#f8f9fb;border-bottom:1px solid var(--rim);flex-wrap:wrap;z-index:9}
-.fb-label{font-size:12px;font-weight:500;color:#9ca3af;white-space:nowrap}
-.fb-sep{width:1px;height:18px;background:var(--rim2);flex-shrink:0;margin:0 4px}
-.cat-chips{display:flex;gap:5px;flex-wrap:wrap}
-.chip{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:600;border:1.5px solid transparent;cursor:pointer;transition:all .18s;background:#fff;white-space:nowrap;font-family:inherit}
-.chip .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.chip:hover{filter:brightness(.94);transform:translateY(-1px)}
-.chip.active{color:#fff!important}
-.fb-select{height:28px;padding:0 28px 0 10px;font-family:inherit;font-size:12px;border:1.5px solid var(--rim2);border-radius:var(--radius);background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239ca3af'/%3E%3C/svg%3E") no-repeat right 8px center;-webkit-appearance:none;appearance:none;color:#1a1a2e;outline:none;cursor:pointer;transition:border-color .15s}
-.fb-select:focus{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.12)}
-.fb-select option{background:#fff}
-.clear-btn{display:flex;align-items:center;gap:5px;height:28px;padding:0 12px;font-family:inherit;font-size:11px;font-weight:600;border:1.5px solid var(--rim2);border-radius:var(--radius);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap}
-.clear-btn:hover{background:rgba(248,81,73,.1);border-color:rgba(248,81,73,.4);color:#f85149}
+#filterbar{display:flex;flex-direction:column;background:#fff;border-bottom:1px solid var(--rim2);z-index:9;}
+#filterbar-top{display:flex;align-items:center;justify-content:space-between;padding:6px 16px;background:#f8f9fb;border-bottom:1px solid var(--rim);}
+#filterbar-top-label{font-size:10px;font-weight:700;color:#9ca3af;letter-spacing:.08em;text-transform:uppercase;}
+#filterbar-top-right{display:flex;align-items:center;gap:12px;}
+#filterbar-filters{display:flex;align-items:flex-end;gap:10px;padding:8px 16px;flex-wrap:wrap;}
+.fb-group{display:flex;flex-direction:column;gap:3px;flex-shrink:0;}
+.fb-group-label{font-size:10px;font-weight:600;color:#9ca3af;white-space:nowrap;letter-spacing:.03em;}
+.fb-select{height:34px;padding:0 28px 0 10px;font-family:inherit;font-size:12px;border:1.5px solid #e5e7eb;border-radius:8px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239ca3af'/%3E%3C/svg%3E") no-repeat right 8px center;-webkit-appearance:none;appearance:none;color:#1a1a2e;outline:none;cursor:pointer;transition:border-color .15s;min-width:120px;}
+.fb-select:focus{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.1);}
+.fb-select:disabled{opacity:.45;cursor:not-allowed;}
+.fb-select option{background:#fff;}
+#filterbar-search{display:flex;flex-direction:column;gap:3px;}
+#filterbar-search .fb-group-label{font-size:10px;font-weight:600;color:#9ca3af;}
+#sideSearch{display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;padding:0 10px;height:34px;transition:border-color .15s;min-width:180px;}
+#sideSearch:focus-within{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.1);}
+#sideSearch svg{flex-shrink:0;color:#9ca3af;}
+#sideSearchInput{border:none;outline:none;font-family:inherit;font-size:12px;color:var(--text);background:transparent;width:100%;min-width:0;}
+#sideSearchInput::placeholder{color:#9ca3af;}
+#sideSearchClear{background:none;border:none;cursor:pointer;color:#9ca3af;font-size:14px;padding:0;line-height:1;display:none;flex-shrink:0;}
+#sideSearchClear:hover{color:#1a1a2e;}
+.fb-sep{width:1px;height:34px;background:#e5e7eb;flex-shrink:0;margin:0 2px;align-self:flex-end;}
+.conn-badge{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);}
+.conn-dot{width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 8px rgba(16,185,129,.4);flex-shrink:0;}
+.clear-btn{display:flex;align-items:center;gap:5px;height:26px;padding:0 10px;font-family:inherit;font-size:11px;font-weight:600;border:1.5px solid var(--rim2);border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;}
+.clear-btn:hover{background:rgba(248,81,73,.1);border-color:rgba(248,81,73,.4);color:#f85149;}
 
 /* ── LAYOUT ── */
 #main{display:flex;overflow:hidden;min-height:0;position:relative}
@@ -62,10 +74,10 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;background:#fff
 #sideHeaderTop{display:flex;align-items:center;justify-content:space-between;}
 #sideHeader .sh-count{font-size:13px;font-weight:700;color:var(--text)}
 #sideHeader .sh-sort{font-size:11px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:4px}
-#sideSearch{display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--rim2);border-radius:8px;padding:5px 10px;transition:border-color .15s;}
+#sideSearch{display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--rim2);border-radius:8px;padding:4px 10px;transition:border-color .15s;height:28px;}
 #sideSearch:focus-within{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.1);}
 #sideSearch svg{flex-shrink:0;color:#9ca3af;}
-#sideSearchInput{border:none;outline:none;font-family:inherit;font-size:12px;color:var(--text);background:transparent;width:100%;min-width:0;}
+#sideSearchInput{border:none;outline:none;font-family:inherit;font-size:12px;color:var(--text);background:transparent;width:160px;min-width:0;}
 #sideSearchInput::placeholder{color:#9ca3af;}
 #sideSearchClear{background:none;border:none;cursor:pointer;color:#9ca3af;font-size:14px;padding:0;line-height:1;display:none;flex-shrink:0;}
 #sideSearchClear:hover{color:#1a1a2e;}
@@ -165,43 +177,96 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
 
 <!-- FILTER BAR -->
 <div id="filterbar">
-  <!-- Event No. dropdown -->
-  <span class="fb-label">Event No.</span>
-  <select class="fb-select" id="eventTabs" onchange="setEvent(this.value)"></select>
+  <!-- Top row: title + demo badge only -->
+  <div id="filterbar-top">
+    <span id="filterbar-top-label">Filters</span>
+    <div id="filterbar-top-right">
+      <div class="conn-badge"><div class="conn-dot"></div><span id="connLabel">Demo</span></div>
+    </div>
+  </div>
+  <!-- Filters row: label on top of each control -->
+  <div id="filterbar-filters">
+    <!-- Search -->
+    <div id="filterbar-search">
+      <div class="fb-group-label">Search records</div>
+      <div id="sideSearch">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M9 9l2.5 2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <input id="sideSearchInput" type="text" placeholder="Search…" oninput="onSearch(this.value)" />
+        <button id="sideSearchClear" onclick="clearSearch()" title="Clear">✕</button>
+      </div>
+    </div>
 
-  <div class="fb-sep"></div>
+    <div class="fb-sep"></div>
 
-  <!-- Category chips -->
-  <span class="fb-label">Category</span>
-  <div class="cat-chips" id="catChips"></div>
+    <!-- Event No. -->
+    <div class="fb-group">
+      <div class="fb-group-label">Event No.</div>
+      <select class="fb-select" id="eventTabs" onchange="setEvent(this.value)"></select>
+    </div>
 
-  <div class="fb-sep"></div>
+    <!-- Category -->
+    <div class="fb-group">
+      <div class="fb-group-label">Category</div>
+      <select class="fb-select" id="filterCategory" onchange="setCatFromDropdown(this.value)">
+        <option value="">All</option>
+      </select>
+    </div>
 
-  <!-- Damage Number dropdown -->
-  <span class="fb-label">Damage No.</span>
-  <select class="fb-select" id="filterDamage"><option value="">All Damage No.</option></select>
+    <!-- Damage No. -->
+    <div class="fb-group">
+      <div class="fb-group-label">Damage No.</div>
+      <select class="fb-select" id="filterDamage"><option value="">All</option></select>
+    </div>
 
-  <!-- Road Name dropdown -->
-  <span class="fb-label">Road</span>
-  <select class="fb-select" id="filterRoad"><option value="">All Roads</option></select>
+    <!-- Road -->
+    <div class="fb-group">
+      <div class="fb-group-label">Road / Asset</div>
+      <select class="fb-select" id="filterRoad"><option value="">All</option></select>
+    </div>
 
-  <!-- PM dropdown -->
-  <span class="fb-label">PM</span>
-  <select class="fb-select" id="filterPM"><option value="">All PMs</option></select>
+    <!-- PM -->
+    <div class="fb-group">
+      <div class="fb-group-label">PM</div>
+      <select class="fb-select" id="filterPM"><option value="">All</option></select>
+    </div>
 
-  <button class="clear-btn" onclick="clearFilters()">✕ Clear filters</button>
+    <!-- Priority -->
+    <div class="fb-group">
+      <div class="fb-group-label">Priority</div>
+      <select class="fb-select" id="filterPriority"><option value="">All</option></select>
+    </div>
 
-  <!-- Has Damage No. checkbox -->
-  <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;user-select:none;">
-    <input type="checkbox" id="hasDamageBtn" checked onchange="toggleHasDamage()" style="width:14px;height:14px;cursor:pointer;accent-color:#1a1a2e;">
-    Show all Roads with DM No.
-  </label>
+    <div class="fb-sep"></div>
 
-  <!-- Connection badge pushed to far right -->
-  <div style="margin-left:auto;display:flex;align-items:center;">
-    <div class="conn-badge">
-      <div class="conn-dot"></div>
-      <span id="connLabel">Demo data</span>
+    <!-- Stage -->
+    <div class="fb-group">
+      <div class="fb-group-label">Stage</div>
+      <select class="fb-select" id="filterStage" onchange="setStage(this.value)">
+        <option value="">All Stages</option>
+      </select>
+    </div>
+
+    <!-- Status -->
+    <div class="fb-group">
+      <div class="fb-group-label">Status</div>
+      <select class="fb-select" id="filterStatus"><option value="">All</option></select>
+    </div>
+
+    <div class="fb-sep"></div>
+
+    <!-- Checkbox aligned with filters -->
+    <div class="fb-group">
+      <div class="fb-group-label">&nbsp;</div>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;user-select:none;height:34px;padding:0 4px;">
+        <input type="checkbox" id="hasDamageBtn" checked onchange="toggleHasDamage()" style="width:13px;height:13px;cursor:pointer;accent-color:#1a1a2e;">
+        Show all Roads with DM No.
+      </label>
+    </div>
+
+    <!-- Clear button aligned with filters -->
+    <div class="fb-group">
+      <div class="fb-group-label">&nbsp;</div>
+      <button class="clear-btn" onclick="clearFilters()" style="height:34px;border-radius:8px;padding:0 14px;font-size:12px;">✕ Clear filters</button>
     </div>
   </div>
 </div>
@@ -213,11 +278,6 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
       <div id="sideHeaderTop">
         <span class="sh-count" id="sideCount">0 records</span>
         <span class="sh-sort">Sort by: Recently Updated ▾</span>
-      </div>
-      <div id="sideSearch">
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M9 9l2.5 2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-        <input id="sideSearchInput" type="text" placeholder="Search damage no., road, location…" oninput="onSearch(this.value)" />
-        <button id="sideSearchClear" onclick="clearSearch()" title="Clear">✕</button>
       </div>
     </div>
     <div id="sideList"></div>
@@ -268,40 +328,40 @@ const STATUSES=['Not Started','In Progress','Completed','No Works Required'];
 const PRIORITIES=['High','Medium','Low'];
 const DEMO=[
   // ── EN0001 · EW ──
-  {eventNo:'EN0001',category:'EW',damageNumber:'DMG-001',damageDetails:'Pavement failure at creek crossing, 40m section',roadName:'Yarratt Rd',roadType:'Local Road',location:'Near Ellenborough River',lat:-31.7841,lng:152.4023,parentID:'a1b2c3d4-0001-0000-0000-000000000001',recoverRef:'EW00001',pm:'Sarah Johnson',priority:'High',status:'In Progress',modifiedOn:'2024-11-12'},
-  {eventNo:'EN0001',category:'EW',damageNumber:'DMG-002',damageDetails:'Shoulder erosion on embankment bend',roadName:'Yarratt Rd',roadType:'Local Road',location:'Yarratt Rd North Section',lat:-31.7830,lng:152.3988,parentID:'a1b2c3d4-0001-0000-0000-000000000002',recoverRef:'EW00002',pm:'Sarah Johnson',priority:'Medium',status:'Not Started',modifiedOn:'2024-11-10'},
-  {eventNo:'EN0001',category:'EW',damageNumber:'DMG-003',damageDetails:'Culvert outlet scour, pipe exposed',roadName:'Black Mountain Rd',roadType:'Regional Road',location:'South of Black Mountain',lat:-31.9261,lng:152.1234,parentID:'a1b2c3d4-0001-0000-0000-000000000003',recoverRef:'EW00003',pm:'Tom Richards',priority:'High',status:'In Progress',modifiedOn:'2024-11-08'},
-  {eventNo:'EN0001',category:'EW',damageNumber:'DMG-004',damageDetails:'Debris blockage at culvert inlet',roadName:'Black Mountain Rd',roadType:'Regional Road',location:'Black Mountain Creek',lat:-31.9255,lng:152.1228,parentID:'a1b2c3d4-0001-0000-0000-000000000004',recoverRef:'EW00004',pm:'Tom Richards',priority:'Low',status:'Completed',modifiedOn:'2024-10-30'},
-  {eventNo:'EN0001',category:'EW',damageNumber:'DMG-005',damageDetails:'Pavement deformation, rutting 80mm',roadName:'Comboyne Rd',roadType:'State Road',location:'Comboyne Township',lat:-31.6020,lng:152.4610,parentID:'a1b2c3d4-0001-0000-0000-000000000005',recoverRef:'EW00005',pm:'Sarah Johnson',priority:'Medium',status:'No Works Required',modifiedOn:'2024-10-25'},
+  {eventNo:'EN0001',category:'EW',damageNumber:'DMG-001',damageDetails:'Pavement failure at creek crossing, 40m section',roadName:'Yarratt Rd',roadType:'Local Road',location:'Near Ellenborough River',lat:-31.7841,lng:152.4023,parentID:'a1b2c3d4-0001-0000-0000-000000000001',recoverRef:'EW00001',pm:'Sarah Johnson',priority:'High',status:'In Progress',scopeStatus:'Completed',pickupStatus:'In Progress',estimatedStatus:'Not Started',approvalStatus:'Approved',modifiedOn:'2024-11-12'},
+  {eventNo:'EN0001',category:'EW',damageNumber:'DMG-002',damageDetails:'Shoulder erosion on embankment bend',roadName:'Yarratt Rd',roadType:'Local Road',location:'Yarratt Rd North Section',lat:-31.7830,lng:152.3988,parentID:'a1b2c3d4-0001-0000-0000-000000000002',recoverRef:'EW00002',pm:'Sarah Johnson',priority:'Medium',status:'Not Started',scopeStatus:'In Progress',pickupStatus:'Not Started',estimatedStatus:'Not Started',approvalStatus:'Pending',modifiedOn:'2024-11-10'},
+  {eventNo:'EN0001',category:'EW',damageNumber:'DMG-003',damageDetails:'Culvert outlet scour, pipe exposed',roadName:'Black Mountain Rd',roadType:'Regional Road',location:'South of Black Mountain',lat:-31.9261,lng:152.1234,parentID:'a1b2c3d4-0001-0000-0000-000000000003',recoverRef:'EW00003',pm:'Tom Richards',priority:'High',status:'In Progress',scopeStatus:'Completed',pickupStatus:'Completed',estimatedStatus:'In Progress',approvalStatus:'Approved',modifiedOn:'2024-11-08'},
+  {eventNo:'EN0001',category:'EW',damageNumber:'DMG-004',damageDetails:'Debris blockage at culvert inlet',roadName:'Black Mountain Rd',roadType:'Regional Road',location:'Black Mountain Creek',lat:-31.9255,lng:152.1228,parentID:'a1b2c3d4-0001-0000-0000-000000000004',recoverRef:'EW00004',pm:'Tom Richards',priority:'Low',status:'Completed',scopeStatus:'Completed',pickupStatus:'Completed',estimatedStatus:'Completed',approvalStatus:'Approved',modifiedOn:'2024-10-30'},
+  {eventNo:'EN0001',category:'EW',damageNumber:'DMG-005',damageDetails:'Pavement deformation, rutting 80mm',roadName:'Comboyne Rd',roadType:'State Road',location:'Comboyne Township',lat:-31.6020,lng:152.4610,parentID:'a1b2c3d4-0001-0000-0000-000000000005',recoverRef:'EW00005',pm:'Sarah Johnson',priority:'Medium',status:'No Works Required',scopeStatus:'Not Started',pickupStatus:'Not Started',estimatedStatus:'Not Started',approvalStatus:'Pending',modifiedOn:'2024-10-25'},
 
   // ── EN0001 · IRW ──
-  {eventNo:'EN0001',category:'IRW',damageNumber:'DMG-006',damageDetails:'Landslip blocking carriageway — clearing required',roadName:'Comboyne Rd',roadType:'State Road',location:'Comboyne Plateau Approach',lat:-31.6035,lng:152.4598,parentID:'a1b2c3d4-0001-0000-0000-000000000006',recoverRef:'DM00006',pm:'Sarah Johnson',priority:'High',status:'In Progress',modifiedOn:'2024-11-12'},
-  {eventNo:'EN0001',category:'IRW',damageNumber:'DMG-007',damageDetails:'Flood scour on downstream road face',roadName:'Byabarra Rd',roadType:'Council Road',location:'Byabarra Bridge South',lat:-31.5540,lng:152.5120,parentID:'a1b2c3d4-0001-0000-0000-000000000007',recoverRef:'DM00007',pm:'Tom Richards',priority:'Medium',status:'Not Started',modifiedOn:'2024-11-10'},
-  {eventNo:'EN0001',category:'IRW',damageNumber:'DMG-008',damageDetails:'Table drain blockage causing seepage',roadName:'Byabarra Rd',roadType:'Council Road',location:'Byabarra Rd Midpoint',lat:-31.5528,lng:152.5134,parentID:'a1b2c3d4-0001-0000-0000-000000000008',recoverRef:'DM00008',pm:'Tom Richards',priority:'Low',status:'Completed',modifiedOn:'2024-11-08'},
-  {eventNo:'EN0001',category:'IRW',damageNumber:'DMG-009',damageDetails:'Road surface cracking and potholing',roadName:'Rawdon Island Rd',roadType:'Local Road',location:'Rawdon Island Causeway',lat:-31.8530,lng:152.6801,parentID:'a1b2c3d4-0001-0000-0000-000000000009',recoverRef:'DM00009',pm:'Lisa Park',priority:'High',status:'In Progress',modifiedOn:'2024-11-05'},
-  {eventNo:'EN0001',category:'IRW',damageNumber:'DMG-010',damageDetails:'Guardrail damage, 25m section',roadName:'Rawdon Island Rd',roadType:'Local Road',location:'Rawdon Island Bend',lat:-31.8541,lng:152.6789,parentID:'a1b2c3d4-0001-0000-0000-000000000010',recoverRef:'DM00010',pm:'Lisa Park',priority:'Medium',status:'Not Started',modifiedOn:'2024-10-28'},
+  {eventNo:'EN0001',category:'IRW',damageNumber:'DMG-006',damageDetails:'Landslip blocking carriageway — clearing required',roadName:'Comboyne Rd',roadType:'State Road',location:'Comboyne Plateau Approach',lat:-31.6035,lng:152.4598,parentID:'a1b2c3d4-0001-0000-0000-000000000006',recoverRef:'DM00006',pm:'Sarah Johnson',priority:'High',status:'In Progress',scopeStatus:'Completed',pickupStatus:'In Progress',estimatedStatus:'In Progress',approvalStatus:'Pending',modifiedOn:'2024-11-12'},
+  {eventNo:'EN0001',category:'IRW',damageNumber:'DMG-007',damageDetails:'Flood scour on downstream road face',roadName:'Byabarra Rd',roadType:'Council Road',location:'Byabarra Bridge South',lat:-31.5540,lng:152.5120,parentID:'a1b2c3d4-0001-0000-0000-000000000007',recoverRef:'DM00007',pm:'Tom Richards',priority:'Medium',status:'Not Started',scopeStatus:'Not Started',pickupStatus:'Not Started',estimatedStatus:'Not Started',approvalStatus:'Not required',modifiedOn:'2024-11-10'},
+  {eventNo:'EN0001',category:'IRW',damageNumber:'DMG-008',damageDetails:'Table drain blockage causing seepage',roadName:'Byabarra Rd',roadType:'Council Road',location:'Byabarra Rd Midpoint',lat:-31.5528,lng:152.5134,parentID:'a1b2c3d4-0001-0000-0000-000000000008',recoverRef:'DM00008',pm:'Tom Richards',priority:'Low',status:'Completed',scopeStatus:'Completed',pickupStatus:'Completed',estimatedStatus:'Completed',approvalStatus:'Completed',modifiedOn:'2024-11-08'},
+  {eventNo:'EN0001',category:'IRW',damageNumber:'DMG-009',damageDetails:'Road surface cracking and potholing',roadName:'Rawdon Island Rd',roadType:'Local Road',location:'Rawdon Island Causeway',lat:-31.8530,lng:152.6801,parentID:'a1b2c3d4-0001-0000-0000-000000000009',recoverRef:'DM00009',pm:'Lisa Park',priority:'High',status:'In Progress',scopeStatus:'Completed',pickupStatus:'Completed',estimatedStatus:'In Progress',approvalStatus:'Pending',modifiedOn:'2024-11-05'},
+  {eventNo:'EN0001',category:'IRW',damageNumber:'DMG-010',damageDetails:'Guardrail damage, 25m section',roadName:'Rawdon Island Rd',roadType:'Local Road',location:'Rawdon Island Bend',lat:-31.8541,lng:152.6789,parentID:'a1b2c3d4-0001-0000-0000-000000000010',recoverRef:'DM00010',pm:'Lisa Park',priority:'Medium',status:'Not Started',scopeStatus:'In Progress',pickupStatus:'Not Started',estimatedStatus:'Not Started',approvalStatus:'Not required',modifiedOn:'2024-10-28'},
 
   // ── EN0001 · EPAR ──
-  {eventNo:'EN0001',category:'EPAR',damageNumber:'DMG-011',damageDetails:'Emergency berm protection — riverbank adjacent to road',roadName:'Lansdowne Rd',roadType:'Regional Road',location:'Lansdowne River Crossing',lat:-31.7820,lng:152.5340,parentID:'a1b2c3d4-0001-0000-0000-000000000011',recoverRef:'DM00011',pm:'Lisa Park',priority:'High',status:'Completed',modifiedOn:'2024-11-01'},
-  {eventNo:'EN0001',category:'EPAR',damageNumber:'DMG-012',damageDetails:'Temporary diversion bunding required',roadName:'Lansdowne Rd',roadType:'Regional Road',location:'Lansdowne Floodplain',lat:-31.7834,lng:152.5328,parentID:'a1b2c3d4-0001-0000-0000-000000000012',recoverRef:'DM00012',pm:'Lisa Park',priority:'Low',status:'No Works Required',modifiedOn:'2024-10-20'},
-  {eventNo:'EN0001',category:'EPAR',damageNumber:'DMG-013',damageDetails:'Emergency sign installation — road closed ahead',roadName:'Wingham Rd',roadType:'State Road',location:'Wingham Township Entry',lat:-31.8680,lng:152.3700,parentID:'a1b2c3d4-0001-0000-0000-000000000013',recoverRef:'DM00013',pm:'Sarah Johnson',priority:'Medium',status:'In Progress',modifiedOn:'2024-11-09'},
+  {eventNo:'EN0001',category:'EPAR',damageNumber:'DMG-011',damageDetails:'Emergency berm protection — riverbank adjacent to road',roadName:'Lansdowne Rd',roadType:'Regional Road',location:'Lansdowne River Crossing',lat:-31.7820,lng:152.5340,parentID:'a1b2c3d4-0001-0000-0000-000000000011',recoverRef:'DM00011',pm:'Lisa Park',priority:'High',status:'Completed',scopeStatus:'Completed',pickupStatus:'Completed',estimatedStatus:'Completed',approvalStatus:'Completed',modifiedOn:'2024-11-01'},
+  {eventNo:'EN0001',category:'EPAR',damageNumber:'DMG-012',damageDetails:'Temporary diversion bunding required',roadName:'Lansdowne Rd',roadType:'Regional Road',location:'Lansdowne Floodplain',lat:-31.7834,lng:152.5328,parentID:'a1b2c3d4-0001-0000-0000-000000000012',recoverRef:'DM00012',pm:'Lisa Park',priority:'Low',status:'Complete - No Work Required',scopeStatus:'Complete - No Work Required',pickupStatus:'Not required',estimatedStatus:'Not required',approvalStatus:'Not required',modifiedOn:'2024-10-20'},
+  {eventNo:'EN0001',category:'EPAR',damageNumber:'DMG-013',damageDetails:'Emergency sign installation — road closed ahead',roadName:'Wingham Rd',roadType:'State Road',location:'Wingham Township Entry',lat:-31.8680,lng:152.3700,parentID:'a1b2c3d4-0001-0000-0000-000000000013',recoverRef:'DM00013',pm:'Sarah Johnson',priority:'Medium',status:'In Progress',scopeStatus:'Completed',pickupStatus:'In Progress',estimatedStatus:'Not Started',approvalStatus:'Pending',modifiedOn:'2024-11-09'},
 
   // ── EN0002 · EW ──
-  {eventNo:'EN0002',category:'EW',damageNumber:'DMG-018',damageDetails:'Urgent road closure — slope failure',roadName:'Brimbin Rd',roadType:'Unsealed Road',location:'Brimbin State Forest',lat:-31.9100,lng:152.5200,parentID:'b2c3d4e5-0002-0000-0000-000000000018',recoverRef:'EW00018',pm:'Tom Richards',priority:'High',status:'In Progress',modifiedOn:'2024-11-11'},
-  {eventNo:'EN0002',category:'EW',damageNumber:'DMG-019',damageDetails:'Slip from uphill fill, carriageway blocked',roadName:'Brimbin Rd',roadType:'Unsealed Road',location:'Brimbin Ridge',lat:-31.9112,lng:152.5212,parentID:'b2c3d4e5-0002-0000-0000-000000000019',recoverRef:'EW00019',pm:'Tom Richards',priority:'Medium',status:'Not Started',modifiedOn:'2024-11-07'},
-  {eventNo:'EN0002',category:'EW',damageNumber:'DMG-020',damageDetails:'Flood inundation — 300m section below DFL',roadName:'Harrington Rd',roadType:'Local Road',location:'Harrington Estuary Flat',lat:-31.8730,lng:152.6900,parentID:'b2c3d4e5-0002-0000-0000-000000000020',recoverRef:'EW00020',pm:'Sarah Johnson',priority:'High',status:'Completed',modifiedOn:'2024-10-31'},
-  {eventNo:'EN0002',category:'EW',damageNumber:'DMG-021',damageDetails:'Scour under road at creek outlet',roadName:'Harrington Rd',roadType:'Local Road',location:'Harrington Creek South',lat:-31.8742,lng:152.6914,parentID:'b2c3d4e5-0002-0000-0000-000000000021',recoverRef:'EW00021',pm:'Sarah Johnson',priority:'Low',status:'No Works Required',modifiedOn:'2024-10-22'},
+  {eventNo:'EN0002',category:'EW',damageNumber:'DMG-018',damageDetails:'Urgent road closure — slope failure',roadName:'Brimbin Rd',roadType:'Unsealed Road',location:'Brimbin State Forest',lat:-31.9100,lng:152.5200,parentID:'b2c3d4e5-0002-0000-0000-000000000018',recoverRef:'EW00018',pm:'Tom Richards',priority:'High',status:'In Progress',scopeStatus:'Completed',pickupStatus:'In Progress',estimatedStatus:'In Progress',approvalStatus:'Pending',modifiedOn:'2024-11-11'},
+  {eventNo:'EN0002',category:'EW',damageNumber:'DMG-019',damageDetails:'Slip from uphill fill, carriageway blocked',roadName:'Brimbin Rd',roadType:'Unsealed Road',location:'Brimbin Ridge',lat:-31.9112,lng:152.5212,parentID:'b2c3d4e5-0002-0000-0000-000000000019',recoverRef:'EW00019',pm:'Tom Richards',priority:'Medium',status:'Not Started',scopeStatus:'Not Started',pickupStatus:'Not Started',estimatedStatus:'Not Started',approvalStatus:'Not required',modifiedOn:'2024-11-07'},
+  {eventNo:'EN0002',category:'EW',damageNumber:'DMG-020',damageDetails:'Flood inundation — 300m section below DFL',roadName:'Harrington Rd',roadType:'Local Road',location:'Harrington Estuary Flat',lat:-31.8730,lng:152.6900,parentID:'b2c3d4e5-0002-0000-0000-000000000020',recoverRef:'EW00020',pm:'Sarah Johnson',priority:'High',status:'Completed',scopeStatus:'Completed',pickupStatus:'Completed',estimatedStatus:'Completed',approvalStatus:'Completed',modifiedOn:'2024-10-31'},
+  {eventNo:'EN0002',category:'EW',damageNumber:'DMG-021',damageDetails:'Scour under road at creek outlet',roadName:'Harrington Rd',roadType:'Local Road',location:'Harrington Creek South',lat:-31.8742,lng:152.6914,parentID:'b2c3d4e5-0002-0000-0000-000000000021',recoverRef:'EW00021',pm:'Sarah Johnson',priority:'Low',status:'Complete - No Work Required',scopeStatus:'Complete - No Work Required',pickupStatus:'Not required',estimatedStatus:'Not required',approvalStatus:'Not required',modifiedOn:'2024-10-22'},
 
   // ── EN0002 · IRW ──
-  {eventNo:'EN0002',category:'IRW',damageNumber:'DMG-022',damageDetails:'Resheet damaged surface gravel, 200m',roadName:'Manning River Dr',roadType:'Council Road',location:'Manning River Dr North',lat:-31.9050,lng:152.4950,parentID:'b2c3d4e5-0002-0000-0000-000000000022',recoverRef:'DM00022',pm:'Lisa Park',priority:'Medium',status:'In Progress',modifiedOn:'2024-11-10'},
-  {eventNo:'EN0002',category:'IRW',damageNumber:'DMG-023',damageDetails:'Pothole patching — high-severity clusters',roadName:'Manning River Dr',roadType:'Council Road',location:'Manning River Dr South',lat:-31.9062,lng:152.4964,parentID:'b2c3d4e5-0002-0000-0000-000000000023',recoverRef:'DM00023',pm:'Lisa Park',priority:'High',status:'Not Started',modifiedOn:'2024-11-06'},
-  {eventNo:'EN0002',category:'IRW',damageNumber:'DMG-024',damageDetails:'Culvert headwall collapse',roadName:'Johns River Rd',roadType:'Local Road',location:'Johns River Township',lat:-31.5210,lng:152.5550,parentID:'b2c3d4e5-0002-0000-0000-000000000024',recoverRef:'DM00024',pm:'Sarah Johnson',priority:'High',status:'In Progress',modifiedOn:'2024-11-04'},
-  {eventNo:'EN0002',category:'IRW',damageNumber:'DMG-025',damageDetails:'Side entry pit blocked — flooding risk',roadName:'Johns River Rd',roadType:'Local Road',location:'Johns River South',lat:-31.5225,lng:152.5562,parentID:'b2c3d4e5-0002-0000-0000-000000000025',recoverRef:'DM00025',pm:'Sarah Johnson',priority:'Low',status:'Completed',modifiedOn:'2024-10-29'},
+  {eventNo:'EN0002',category:'IRW',damageNumber:'DMG-022',damageDetails:'Resheet damaged surface gravel, 200m',roadName:'Manning River Dr',roadType:'Council Road',location:'Manning River Dr North',lat:-31.9050,lng:152.4950,parentID:'b2c3d4e5-0002-0000-0000-000000000022',recoverRef:'DM00022',pm:'Lisa Park',priority:'Medium',status:'In Progress',scopeStatus:'Completed',pickupStatus:'In Progress',estimatedStatus:'In Progress',approvalStatus:'Pending',modifiedOn:'2024-11-10'},
+  {eventNo:'EN0002',category:'IRW',damageNumber:'DMG-023',damageDetails:'Pothole patching — high-severity clusters',roadName:'Manning River Dr',roadType:'Council Road',location:'Manning River Dr South',lat:-31.9062,lng:152.4964,parentID:'b2c3d4e5-0002-0000-0000-000000000023',recoverRef:'DM00023',pm:'Lisa Park',priority:'High',status:'Not Started',scopeStatus:'In Progress',pickupStatus:'Not Started',estimatedStatus:'Not Started',approvalStatus:'Not required',modifiedOn:'2024-11-06'},
+  {eventNo:'EN0002',category:'IRW',damageNumber:'DMG-024',damageDetails:'Culvert headwall collapse',roadName:'Johns River Rd',roadType:'Local Road',location:'Johns River Township',lat:-31.5210,lng:152.5550,parentID:'b2c3d4e5-0002-0000-0000-000000000024',recoverRef:'DM00024',pm:'Sarah Johnson',priority:'High',status:'In Progress',scopeStatus:'Completed',pickupStatus:'Completed',estimatedStatus:'In Progress',approvalStatus:'Pending',modifiedOn:'2024-11-04'},
+  {eventNo:'EN0002',category:'IRW',damageNumber:'DMG-025',damageDetails:'Side entry pit blocked — flooding risk',roadName:'Johns River Rd',roadType:'Local Road',location:'Johns River South',lat:-31.5225,lng:152.5562,parentID:'b2c3d4e5-0002-0000-0000-000000000025',recoverRef:'DM00025',pm:'Sarah Johnson',priority:'Low',status:'Completed',scopeStatus:'Completed',pickupStatus:'Completed',estimatedStatus:'Completed',approvalStatus:'Completed',modifiedOn:'2024-10-29'},
 
   // ── EN0002 · EPAR ──
-  {eventNo:'EN0002',category:'EPAR',damageNumber:'DMG-026',damageDetails:'Sandbag deployment along road edge',roadName:'Coopernook Rd',roadType:'Council Road',location:'Coopernook Levee Bank',lat:-31.8400,lng:152.5900,parentID:'b2c3d4e5-0002-0000-0000-000000000026',recoverRef:'DM00026',pm:'Tom Richards',priority:'Medium',status:'Not Started',modifiedOn:'2024-11-08'},
-  {eventNo:'EN0002',category:'EPAR',damageNumber:'DMG-027',damageDetails:'Emergency speed restriction — damaged road surface',roadName:'Coopernook Rd',roadType:'Council Road',location:'Coopernook West',lat:-31.8415,lng:152.5880,parentID:'b2c3d4e5-0002-0000-0000-000000000027',recoverRef:'DM00027',pm:'Tom Richards',priority:'High',status:'In Progress',modifiedOn:'2024-11-03'},
-  {eventNo:'EN0002',category:'EPAR',damageNumber:'DMG-028',damageDetails:'Temporary traffic management — single lane',roadName:'Tinonee Rd',roadType:'Local Road',location:'Tinonee Bridge',lat:-31.9330,lng:152.4500,parentID:'b2c3d4e5-0002-0000-0000-000000000028',recoverRef:'DM00028',pm:'Lisa Park',priority:'Low',status:'Completed',modifiedOn:'2024-10-18'},
+  {eventNo:'EN0002',category:'EPAR',damageNumber:'DMG-026',damageDetails:'Sandbag deployment along road edge',roadName:'Coopernook Rd',roadType:'Council Road',location:'Coopernook Levee Bank',lat:-31.8400,lng:152.5900,parentID:'b2c3d4e5-0002-0000-0000-000000000026',recoverRef:'DM00026',pm:'Tom Richards',priority:'Medium',status:'Not Started',scopeStatus:'Not Started',pickupStatus:'Not Started',estimatedStatus:'Not Started',approvalStatus:'Not required',modifiedOn:'2024-11-08'},
+  {eventNo:'EN0002',category:'EPAR',damageNumber:'DMG-027',damageDetails:'Emergency speed restriction — damaged road surface',roadName:'Coopernook Rd',roadType:'Council Road',location:'Coopernook West',lat:-31.8415,lng:152.5880,parentID:'b2c3d4e5-0002-0000-0000-000000000027',recoverRef:'DM00027',pm:'Tom Richards',priority:'High',status:'In Progress',scopeStatus:'Completed',pickupStatus:'In Progress',estimatedStatus:'Not Started',approvalStatus:'Pending',modifiedOn:'2024-11-03'},
+  {eventNo:'EN0002',category:'EPAR',damageNumber:'DMG-028',damageDetails:'Temporary traffic management — single lane',roadName:'Tinonee Rd',roadType:'Local Road',location:'Tinonee Bridge',lat:-31.9330,lng:152.4500,parentID:'b2c3d4e5-0002-0000-0000-000000000028',recoverRef:'DM00028',pm:'Lisa Park',priority:'Low',status:'Completed',scopeStatus:'Completed',pickupStatus:'Completed',estimatedStatus:'Completed',approvalStatus:'Completed',modifiedOn:'2024-10-18'},
 ];
 
 /* ── NORMALISE ── maps Power Apps JSON keys to internal fields ── */
@@ -327,14 +387,27 @@ function normalise(raw){
     recoverRef:   dmgNo,
     pm:           g('PM','cr8fb_PM','pm')                                                        || '',
     depot:        g('Depot','depot')                                                              || '',
-    priority:     g('Priority','priority')                                                        || '',
-    status:       g('Construction_Status','constructionStatus','status')                          || '',
-    modifiedOn:   g('Modified_On','modifiedOn','modifiedon')                                      || '',
+    priority:       g('Priority','priority')                                                        || '',
+    status:         g('Construction_Status','constructionStatus','status')                          || '',
+    scopeStatus:    g('Scope_Status','scopeStatus')                                                 || '',
+    pickupStatus:   g('Pickup_Status','Pick_up_Status','pickupStatus')                              || '',
+    estimatedStatus:g('Estimated_Status','estimatedStatus')                                         || '',
+    approvalStatus: g('Approval_Status','approvalStatus')                                           || '',
+    modifiedOn:     g('Modified_On','modifiedOn','modifiedon')                                      || '',
   };
 }
 
+/* ── STAGES ── */
+const STAGES=[
+  {key:'scopeStatus',    label:'Scope'},
+  {key:'pickupStatus',   label:'Pick-up'},
+  {key:'estimatedStatus',label:'Estimated'},
+  {key:'approvalStatus', label:'Approval'},
+  {key:'status',         label:'Construction'},
+];
+
 /* ── STATE ── */
-let records=[], activeEvent='EN0001', activeCategory=null, filterDamage='', filterRoad='', filterPM='', filterHasDamage=true, filterSearch='';
+let records=[], activeEvent='EN0001', activeCategory=null, filterDamage='', filterRoad='', filterPM='', filterPriority='', filterStatus='', filterHasDamage=true, filterSearch='', activeStage='';
 let azMap=null, popup=null, markers=[];
 const groupOpen={};
 const CAT_KEYS=['IRW','EW','EPAR'];
@@ -366,31 +439,69 @@ function buildEventTabs(){
   sel.innerHTML=EVENT_KEYS.map(ev=>`<option value="${ev}"${activeEvent===ev?' selected':''}>${ev}</option>`).join('');
 }
 function setEvent(ev){
-  activeEvent=ev; activeCategory=null; filterDamage=''; filterRoad=''; filterPM=''; filterHasDamage=true;
-  document.getElementById('filterDamage').value='';
-  document.getElementById('filterRoad').value='';
-  document.getElementById('filterPM').value='';
+  activeEvent=ev; activeCategory=null; filterDamage=""; filterRoad=""; filterPM=""; filterPriority=""; filterStatus=""; activeStage=""; filterHasDamage=true;
+  document.getElementById("filterDamage").value="";
+  document.getElementById("filterRoad").value="";
+  document.getElementById("filterPM").value="";
+  document.getElementById("filterPriority").value="";
+  document.getElementById("filterCategory").value="";
+  document.getElementById("filterStage").value="";
+  document.getElementById("filterStatus").value="";
+  document.getElementById("filterStatus").disabled=true;
   updateHasDamageBtn();
   Object.keys(groupOpen).forEach(k=>{groupOpen[k]=false;});
-  buildEventTabs(); buildCatChips(); populateDropdowns();
+  buildEventTabs(); buildStageDropdown(); buildCatChips(); populateDropdowns();
   renderStats(); renderList(); updatePins(); setTimeout(fitAll,100);
   if(popup)popup.close(); closeFloatPopup();
 }
 
-/* ── CATEGORY CHIPS ── */
+/* ── CATEGORY DROPDOWN ── */
 function buildCatChips(){
-  document.getElementById('catChips').innerHTML=CAT_KEYS.map(cat=>{
-    const col=cc(cat), isAct=activeCategory===cat;
-    return `<button class="chip${isAct?' active':''}"
-      style="border-color:${col}55;color:${isAct?'#fff':col};background:${isAct?col:'#fff'};${isAct?`box-shadow:0 0 10px ${col}44`:''}"
-      onclick="setCat('${cat}')">
-      <span class="dot" style="background:${col}"></span>${cat}</button>`;
-  }).join('');
+  const sel=document.getElementById('filterCategory');
+  if(!sel)return;
+  sel.innerHTML=`<option value="">All Categories</option>`+
+    CAT_KEYS.map(cat=>
+      `<option value="${cat}"${activeCategory===cat?' selected':''}>${cat} — ${(CAT_CFG[cat]||{label:cat}).label}</option>`
+    ).join('');
+}
+function setCatFromDropdown(cat){
+  activeCategory=cat||null;
+  Object.keys(groupOpen).forEach(k=>{groupOpen[k]=false;});
+  if(popup)popup.close(); closeFloatPopup();
+  renderList(); updatePins(); setTimeout(fitAll,100);
 }
 function setCat(cat){
   activeCategory=activeCategory===cat?null:cat;
+  buildCatChips();
   Object.keys(groupOpen).forEach(k=>{groupOpen[k]=false;});
-  buildCatChips(); if(popup)popup.close(); renderList(); updatePins(); setTimeout(fitAll,100);
+  if(popup)popup.close(); closeFloatPopup(); renderList(); updatePins(); setTimeout(fitAll,100);
+}
+
+/* ── STAGE DROPDOWN ── */
+function buildStageDropdown(){
+  const sel=document.getElementById('filterStage');
+  sel.innerHTML=`<option value="">All Stages</option>`+
+    STAGES.map(s=>`<option value="${s.key}"${activeStage===s.key?' selected':''}>${s.label} Status</option>`).join('');
+}
+function setStage(key){
+  activeStage=key; filterStatus='';
+  document.getElementById('filterStatus').value='';
+  populateStatusDropdown();
+  renderList(); updatePins(); setTimeout(fitAll,150);
+}
+function populateStatusDropdown(){
+  const stS=document.getElementById('filterStatus');
+  if(!activeStage){
+    stS.innerHTML='<option value="">All</option>';
+    stS.disabled=true;
+    return;
+  }
+  stS.disabled=false;
+  // Use all records (not filtered by event) to get all possible values
+  const vals=[...new Set(records.map(r=>r[activeStage]).filter(Boolean))].sort();
+  const cv=filterStatus;
+  stS.innerHTML='<option value="">All</option>'+vals.map(v=>`<option value="${v}">${v}</option>`).join('');
+  if(vals.includes(cv))stS.value=cv; else stS.value='';
 }
 
 /* ── DROPDOWNS ── */
@@ -399,12 +510,22 @@ function populateDropdowns(){
   const damages=[...new Set(base.map(r=>r.damageNumber).filter(Boolean))].sort();
   const roads=[...new Set(base.map(r=>r.roadName).filter(Boolean))].sort();
   const pms=[...new Set(base.map(r=>r.pm).filter(Boolean))].sort();
-  const dS=document.getElementById('filterDamage'), rS=document.getElementById('filterRoad'), pS=document.getElementById('filterPM');
-  const cd=dS.value, cr=rS.value, cp=pS.value;
+  const priorities=[...new Set(base.map(r=>r.priority).filter(Boolean))].sort();
+  const statuses=[...new Set(base.map(r=>r.status).filter(Boolean))].sort();
+  const dS=document.getElementById('filterDamage'), rS=document.getElementById('filterRoad');
+  const pS=document.getElementById('filterPM'), prS=document.getElementById('filterPriority'), stS=document.getElementById('filterStatus');
+  const cd=dS.value, cr=rS.value, cp=pS.value, cpr=prS.value, cst=stS.value;
   dS.innerHTML='<option value="">All Damage No.</option>'+damages.map(v=>`<option value="${v}">${v}</option>`).join('');
   rS.innerHTML='<option value="">All Roads</option>'+roads.map(v=>`<option value="${v}">${v}</option>`).join('');
   pS.innerHTML='<option value="">All PMs</option>'+pms.map(v=>`<option value="${v}">${v}</option>`).join('');
-  if(damages.includes(cd))dS.value=cd; if(roads.includes(cr))rS.value=cr; if(pms.includes(cp))pS.value=cp;
+  prS.innerHTML='<option value="">All Priorities</option>'+priorities.map(v=>`<option value="${v}">${v}</option>`).join('');
+  stS.innerHTML='<option value="">All Status</option>'+statuses.map(v=>`<option value="${v}">${v}</option>`).join('');
+  if(damages.includes(cd))dS.value=cd;
+  if(roads.includes(cr))rS.value=cr;
+  if(pms.includes(cp))pS.value=cp;
+  if(priorities.includes(cpr))prS.value=cpr;
+  if(statuses.includes(cst))stS.value=cst;
+  populateStatusDropdown();
 }
 function onSearch(val){
   filterSearch=val.trim();
@@ -421,10 +542,15 @@ function clearSearch(){
   renderList(); updatePins(); setTimeout(fitAll,150);
 }
 function clearFilters(){
-  activeCategory=null; filterDamage=''; filterRoad=''; filterPM=''; filterHasDamage=true; filterSearch='';
+  activeCategory=null; filterDamage=''; filterRoad=''; filterPM=''; filterPriority=''; filterStatus=''; activeStage=''; filterHasDamage=true; filterSearch='';
   document.getElementById('filterDamage').value='';
   document.getElementById('filterRoad').value='';
   document.getElementById('filterPM').value='';
+  document.getElementById('filterPriority').value='';
+  document.getElementById('filterCategory').value='';
+  document.getElementById('filterStage').value='';
+  document.getElementById('filterStatus').value='';
+  document.getElementById('filterStatus').disabled=true;
   const _si=document.getElementById('sideSearchInput'); if(_si)_si.value='';
   const _sc=document.getElementById('sideSearchClear'); if(_sc)_sc.style.display='none';
   updateHasDamageBtn();
@@ -450,17 +576,23 @@ function getFiltered(){
     if(filterDamage&&r.damageNumber!==filterDamage)return false;
     if(filterRoad&&r.roadName!==filterRoad)return false;
     if(filterPM&&r.pm!==filterPM)return false;
-    if(q&&![r.damageNumber,r.roadName,r.location,r.pm].some(v=>(v||'').toLowerCase().includes(q)))return false;
+    if(filterPriority&&r.priority!==filterPriority)return false;
+    if(filterStatus&&r[activeStage]!==filterStatus)return false;
+    if(q){
+      const fields=[r.damageNumber,r.roadName,r.location,r.pm,r.category,r.priority,r.status,r.damageDetails,r.roadType,r.depot,r.eventNo];
+      if(!fields.some(v=>(v||'').toLowerCase().includes(q)))return false;
+    }
     return true;
   });
 }
 
 /* ── STATUS CONFIG ── */
 const STATUS_CFG={
-  'In Progress':      {bg:'#dbeafe',color:'#1d4ed8',label:'IN PROGRESS'},
-  'Not Started':      {bg:'#f1f5f9',color:'#64748b',label:'NOT STARTED'},
-  'Completed':        {bg:'#dcfce7',color:'#15803d',label:'COMPLETED'},
-  'No Works Required':{bg:'#fef9c3',color:'#a16207',label:'NO WORKS REQUIRED'},
+  'In Progress':              {bg:'#dbeafe',color:'#1d4ed8',label:'IN PROGRESS'},
+  'Not Started':              {bg:'#f1f5f9',color:'#64748b',label:'NOT STARTED'},
+  'Not required':             {bg:'#faf5ff',color:'#7e22ce',label:'NOT REQUIRED'},
+  'Completed':                {bg:'#dcfce7',color:'#15803d',label:'COMPLETED'},
+  'Complete - No Work Required':{bg:'#fef9c3',color:'#a16207',label:'COMPLETE - NO WORK REQUIRED'},
 };
 const PRIORITY_CFG={
   'High':  {color:'#ef4444'},
@@ -497,7 +629,8 @@ function renderList(){
     const safeId='grp_'+road.replace(/[^a-z0-9]/gi,'_');
     const cards=items.map(r=>{
       const col=cc(r.category), bg=cl(r.category), gi=records.indexOf(r);
-      const sc=STATUS_CFG[r.status]||{bg:'#f1f5f9',color:'#64748b',label:(r.status||'UNKNOWN').toUpperCase()};
+      const stageVal=r[activeStage]||r.status||'';
+      const sc=STATUS_CFG[stageVal]||{bg:'#f1f5f9',color:'#64748b',label:(stageVal||'—').toUpperCase()};
       const pc=PRIORITY_CFG[r.priority]||{color:'#9ca3af'};
       return `<div class="list-card" id="li-${gi}" onclick="flyToRecord(${gi})" style="border-left:3px solid ${col};">
         <div class="card-top">
@@ -793,7 +926,7 @@ function postUp(obj){try{window.parent.postMessage(JSON.stringify(obj),'*');}cat
 /* ── RELOAD DATA ── called whenever hash changes ── */
 function reloadData(){
   if(loadFromHash()){
-    buildEventTabs(); buildCatChips(); populateDropdowns();
+    buildEventTabs(); buildStageDropdown(); buildCatChips(); populateDropdowns();
     renderStats(); renderList(); updateHasDamageBtn(); updatePins();
     setTimeout(fitAll,150);
   }
@@ -803,6 +936,8 @@ function reloadData(){
 document.getElementById('filterDamage').addEventListener('change',function(){filterDamage=this.value;renderList();updatePins();setTimeout(fitAll,150);});
 document.getElementById('filterRoad').addEventListener('change',function(){filterRoad=this.value;renderList();updatePins();setTimeout(fitAll,150);});
 document.getElementById('filterPM').addEventListener('change',function(){filterPM=this.value;renderList();updatePins();setTimeout(fitAll,150);});
+document.getElementById('filterPriority').addEventListener('change',function(){filterPriority=this.value;renderList();updatePins();setTimeout(fitAll,150);});
+document.getElementById('filterStatus').addEventListener('change',function(){filterStatus=this.value;renderList();updatePins();setTimeout(fitAll,150);});
 
 // Reload when Power Apps updates the iframe src
 window.addEventListener('hashchange', reloadData);
@@ -817,7 +952,8 @@ if(!loadFromHash()){
   activeEvent=EVENT_KEYS[EVENT_KEYS.length-1]||'';
   document.getElementById('connLabel').textContent='Demo';
 }
-buildEventTabs(); buildCatChips(); populateDropdowns(); renderStats(); renderList(); updateHasDamageBtn();
+buildEventTabs(); buildStageDropdown(); buildCatChips(); populateDropdowns(); renderStats(); renderList(); updateHasDamageBtn();
+document.getElementById('filterStatus').disabled=true;
 // Default collapsed side pane
 (()=>{
   const side=document.getElementById('side');
