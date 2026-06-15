@@ -413,20 +413,33 @@ const groupOpen={};
 const CAT_KEYS=['IRW','EW','EPAR'];
 let EVENT_KEYS=['EN0001','EN0002'];
 
+/* ── STATUS OPTIONS from Dropdown Options table ── */
+let statusOptions=[];
+
 /* ── LOAD FROM HASH ── */
 function loadFromHash(){
   try{
     const h=window.location.hash; if(!h||h.length<2)return false;
     const p=JSON.parse(decodeURIComponent(h.substring(1)));
-    if(!Array.isArray(p)||!p.length)return false;
-    const _all=p.map(normalise);
+    if(!p)return false;
+    let rawRecords=[];
+    // New format: {records:[...], statusOptions:[...]}
+    if(!Array.isArray(p)&&p.records&&Array.isArray(p.records)){
+      rawRecords=p.records;
+      statusOptions=(p.statusOptions||[]).sort((a,b)=>(a.SortOrder||0)-(b.SortOrder||0));
+    } else if(Array.isArray(p)&&p.length){
+      rawRecords=p;
+      statusOptions=[];
+    } else {
+      return false;
+    }
+    const _all=rawRecords.map(normalise);
     records=_all.filter(r=>r.lat!==0&&r.lng!==0&&!isNaN(r.lat)&&!isNaN(r.lng));
-    const _sk=_all.length-records.length;
-    // Derive event keys from real data, sorted
     const evKeys=[...new Set(records.map(r=>r.eventNo).filter(Boolean))].sort();
     if(evKeys.length) EVENT_KEYS.splice(0,EVENT_KEYS.length,...evKeys);
     activeEvent=EVENT_KEYS[EVENT_KEYS.length-1]||'';
-    document.getElementById('connLabel').textContent='Dataverse';    return true;
+    document.getElementById('connLabel').textContent='Dataverse';
+    return true;
   }catch(e){console.error('loadFromHash:',e);return false;}
 }
 
@@ -497,8 +510,14 @@ function populateStatusDropdown(){
     return;
   }
   stS.disabled=false;
-  // Use all records (not filtered by event) to get all possible values
-  const vals=[...new Set(records.map(r=>r[activeStage]).filter(Boolean))].sort();
+  let vals=[];
+  if(statusOptions.length){
+    // Use Dropdown Options table (pre-sorted by SortOrder)
+    vals=statusOptions.map(o=>o.Name).filter(Boolean);
+  } else {
+    // Fallback: derive from actual data
+    vals=[...new Set(records.map(r=>r[activeStage]).filter(Boolean))].sort();
+  }
   const cv=filterStatus;
   stS.innerHTML='<option value="">All</option>'+vals.map(v=>`<option value="${v}">${v}</option>`).join('');
   if(vals.includes(cv))stS.value=cv; else stS.value='';
