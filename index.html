@@ -84,10 +84,6 @@ html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;background:#fff
 #sideList{flex:1;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:0}
 #sideList::-webkit-scrollbar{width:3px}
 #sideList::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:2px}
-#sideFooter{padding:10px 12px;background:#f5f7fa;border-top:1px solid var(--rim);flex-shrink:0}
-#exportBtn{width:100%;padding:10px;background:#4F46E5;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s}
-#exportBtn:hover{background:#4338CA}
-
 /* Group header */
 .group-header{display:flex;align-items:center;gap:8px;padding:8px 4px 4px;cursor:pointer;user-select:none;transition:opacity .12s;margin-top:4px}
 .group-header:first-child{margin-top:0}
@@ -170,6 +166,15 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
 .event-tab{padding:3px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .15s;font-family:inherit}
 .event-tab.active{background:#fff;color:#1a1a2e;box-shadow:0 1px 4px rgba(0,0,0,.12)}
 .event-tab:hover:not(.active){color:#1a1a2e}
+
+/* ── LOADING OVERLAY ── */
+#mapLoader{position:absolute;top:0;left:0;right:0;bottom:0;z-index:100;background:rgba(255,255,255,0.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:opacity .5s ease;}
+#mapLoader.hidden{opacity:0;pointer-events:none;}
+#mapLoader.gone{display:none;}
+.loader-bar-track{width:200px;height:3px;background:#e5e7eb;border-radius:4px;overflow:hidden;}
+.loader-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#6366F1,#8B5CF6,#6366F1);background-size:200% 100%;animation:loaderSlide 1.2s linear infinite;}
+@keyframes loaderSlide{0%{background-position:100% 0}100%{background-position:-100% 0}}
+.loader-text{font-size:11px;font-weight:600;color:#6b7280;letter-spacing:.04em;}
 </style>
 </head>
 <body>
@@ -281,12 +286,6 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
       </div>
     </div>
     <div id="sideList"></div>
-    <div id="sideFooter">
-      <button id="exportBtn" onclick="exportList()">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3M2 11h10" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Export List
-      </button>
-    </div>
   </div>
 
   <div id="splitter"></div>
@@ -296,6 +295,10 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
       <span class="arrow">‹</span>
     </button>
     <div id="azureMap"></div>
+    <div id="mapLoader">
+      <div class="loader-text">Loading map…</div>
+      <div class="loader-bar-track"><div class="loader-bar-fill"></div></div>
+    </div>
     <div id="floatPopup"><button class="pop-close" onclick="closeFloatPopup()">✕</button><div id="floatPopupInner"></div></div>
     <button onclick="fitAll()" title="Fit all pins" style="position:absolute;bottom:120px;right:14px;z-index:10;width:32px;height:32px;background:#fff;border:1px solid rgba(0,0,0,0.14);border-radius:6px;font-size:16px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;">⊡</button>
   </div>
@@ -415,6 +418,8 @@ let EVENT_KEYS=['EN0001','EN0002'];
 
 /* ── STATUS OPTIONS from Dropdown Options table ── */
 let statusOptions=[];
+let priorityOptions=[];
+let pmOptions=[];
 
 /* ── LOAD FROM HASH ── */
 function loadFromHash(){
@@ -427,9 +432,13 @@ function loadFromHash(){
     if(!Array.isArray(p)&&p.records&&Array.isArray(p.records)){
       rawRecords=p.records;
       statusOptions=(p.statusOptions||[]).sort((a,b)=>(a.SortOrder||0)-(b.SortOrder||0));
+      priorityOptions=(p.priorityOptions||[]).sort((a,b)=>(a.SortOrder||0)-(b.SortOrder||0));
+      pmOptions=(p.pmOptions||[]).sort((a,b)=>(a.SortOrder||0)-(b.SortOrder||0));
     } else if(Array.isArray(p)&&p.length){
       rawRecords=p;
       statusOptions=[];
+      priorityOptions=[];
+      pmOptions=[];
     } else {
       return false;
     }
@@ -528,22 +537,29 @@ function populateDropdowns(){
   const base=records.filter(r=>r.eventNo===activeEvent);
   const damages=[...new Set(base.map(r=>r.damageNumber).filter(Boolean))].sort();
   const roads=[...new Set(base.map(r=>r.roadName).filter(Boolean))].sort();
-  const pms=[...new Set(base.map(r=>r.pm).filter(Boolean))].sort();
-  const priorities=[...new Set(base.map(r=>r.priority).filter(Boolean))].sort();
-  const statuses=[...new Set(base.map(r=>r.status).filter(Boolean))].sort();
   const dS=document.getElementById('filterDamage'), rS=document.getElementById('filterRoad');
-  const pS=document.getElementById('filterPM'), prS=document.getElementById('filterPriority'), stS=document.getElementById('filterStatus');
-  const cd=dS.value, cr=rS.value, cp=pS.value, cpr=prS.value, cst=stS.value;
-  dS.innerHTML='<option value="">All Damage No.</option>'+damages.map(v=>`<option value="${v}">${v}</option>`).join('');
-  rS.innerHTML='<option value="">All Roads</option>'+roads.map(v=>`<option value="${v}">${v}</option>`).join('');
-  pS.innerHTML='<option value="">All PMs</option>'+pms.map(v=>`<option value="${v}">${v}</option>`).join('');
-  prS.innerHTML='<option value="">All Priorities</option>'+priorities.map(v=>`<option value="${v}">${v}</option>`).join('');
-  stS.innerHTML='<option value="">All Status</option>'+statuses.map(v=>`<option value="${v}">${v}</option>`).join('');
+  const pS=document.getElementById('filterPM'), prS=document.getElementById('filterPriority');
+  const cd=dS.value, cr=rS.value, cp=pS.value, cpr=prS.value;
+
+  dS.innerHTML='<option value="">All</option>'+damages.map(v=>`<option value="${v}">${v}</option>`).join('');
+  rS.innerHTML='<option value="">All</option>'+roads.map(v=>`<option value="${v}">${v}</option>`).join('');
+
+  // PM — use Dropdown Options table if available, else derive from data
+  const pms=pmOptions.length
+    ? pmOptions.map(o=>o.Name).filter(Boolean)
+    : [...new Set(base.map(r=>r.pm).filter(Boolean))].sort();
+  pS.innerHTML='<option value="">All</option>'+pms.map(v=>`<option value="${v}">${v}</option>`).join('');
+
+  // Priority — use Dropdown Options table if available, else derive from data
+  const priorities=priorityOptions.length
+    ? priorityOptions.map(o=>o.Name).filter(Boolean)
+    : [...new Set(base.map(r=>r.priority).filter(Boolean))].sort();
+  prS.innerHTML='<option value="">All</option>'+priorities.map(v=>`<option value="${v}">${v}</option>`).join('');
+
   if(damages.includes(cd))dS.value=cd;
   if(roads.includes(cr))rS.value=cr;
   if(pms.includes(cp))pS.value=cp;
   if(priorities.includes(cpr))prS.value=cpr;
-  if(statuses.includes(cst))stS.value=cst;
   populateStatusDropdown();
 }
 function onSearch(val){
@@ -705,20 +721,6 @@ function highlightList(r){
   if(el){el.classList.add('active');el.scrollIntoView({behavior:'smooth',block:'nearest'});}
 }
 
-/* ── EXPORT LIST ── */
-function exportList(){
-  const vis=getFiltered();
-  if(!vis.length){alert('No records to export.');return;}
-  const headers=['Damage No.','Road Name','Location','Category','Status','Priority','PM','Modified On','Lat','Lng'];
-  const rows=vis.map(r=>[
-    r.damageNumber,r.roadName,r.location,r.category,r.status,r.priority,r.pm,r.modifiedOn,r.lat,r.lng
-  ].map(v=>`"${(v||'').toString().replace(/"/g,'""')}"`).join(','));
-  const csv=[headers.join(','),...rows].join('\n');
-  const a=document.createElement('a');
-  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
-  a.download='drfa_damage_list.csv';
-  a.click();
-}
 
 /* ── POPUP HTML — static map image loaded lazily ── */
 function popupHtml(r){
@@ -793,8 +795,23 @@ function pinSvg(col, cat){
   </svg>`;
 }
 
+/* ── LOADER ── */
+function showLoader(msg){
+  const el=document.getElementById('mapLoader');
+  if(!el)return;
+  el.querySelector('.loader-text').textContent=msg||'Loading map…';
+  el.classList.remove('hidden','gone');
+}
+function hideLoader(){
+  const el=document.getElementById('mapLoader');
+  if(!el)return;
+  el.classList.add('hidden');
+  setTimeout(()=>el.classList.add('gone'),520);
+}
+
 /* ── AZURE MAP INIT — lightweight road style ── */
 function initMap(){
+  showLoader('Loading map…');
   azMap=new atlas.Map('azureMap',{
     center:[152.45,-31.75],
     zoom:9,
@@ -806,6 +823,7 @@ function initMap(){
     showFeedbackLink:false,
   });
   azMap.events.add('ready',()=>{
+    hideLoader();
     // No Azure popup needed — using custom float panel
     setTimeout(updatePins, 200);
   });
@@ -818,6 +836,7 @@ function updatePins(){
   // Debounce rapid calls
   if(_pinTimer)clearTimeout(_pinTimer);
   _pinTimer=setTimeout(()=>{
+    showLoader('Updating pins…');
     markers.forEach(m=>azMap.markers.remove(m.marker||m));
     markers=[];
     const vis=getFiltered();
@@ -849,6 +868,7 @@ function updatePins(){
         });
       }
       if(end<vis.length) requestAnimationFrame(()=>addBatch(end));
+      else hideLoader();
     }
     addBatch(0);
   }, 80);
