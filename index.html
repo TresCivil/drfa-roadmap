@@ -673,7 +673,7 @@ function renderList(){
           <span class="card-arrow">›</span>
         </div>
         <div style="margin-bottom:5px"><span class="card-status" style="background:${sc.bg};color:${sc.color}">${sc.label}</span></div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">📍 ${r.location||'—'}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">📋 ${r.location||'—'}</div>
         <div class="card-desc">👤 ${r.pm||'—'}</div>
         <div class="card-meta">
           <span class="card-date">${r.modifiedOn?'Updated '+fmtDate(r.modifiedOn):'—'}</span>
@@ -759,7 +759,7 @@ function popupHtml(r){
     <div class="pop-body">
       <div class="pop-field"><div class="pop-fkey">Damage No.</div><div class="pop-fval">${r.damageNumber}</div></div>
       <div class="pop-field"><div class="pop-fkey">Road Type</div><div class="pop-fval">${r.roadType||'—'}</div></div>
-      <div class="pop-field full"><div class="pop-fkey">Location</div><div class="pop-fval">${r.location||'—'}</div></div>
+      <div class="pop-field full"><div class="pop-fkey">Damage Details</div><div class="pop-fval">${r.location||'—'}</div></div>
       <div class="pop-field full"><div class="pop-fkey">Damage Details</div><div class="pop-fval">${r.damageDetails||'—'}</div></div>
       ${r.pm?`<div class="pop-field full"><div class="pop-fkey">Project Manager</div><div class="pop-fval">${r.pm}</div></div>`:''}
       <div class="pop-field"><div class="pop-fkey">Latitude</div><div class="pop-fval">${r.lat.toFixed(6)}</div></div>
