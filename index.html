@@ -414,10 +414,11 @@ function normalise(raw){
   return {
     eventNo:      g('Event_No','AGRN_No.','cr8fb_AGRN_No','eventNo')                             || '',
     category:     (()=>{
-      const raw=g('Category','Work_Register_Name','cr8fb_Work_Register_Name','category')||'';
-      if(/^IRW$|^irw$|immediate/i.test(raw)) return 'IRW';
-      if(/^EW$|^ew$|emergent/i.test(raw)) return 'EW';
-      if(/^EPAR$|^epar$|repa/i.test(raw)) return 'EPAR';
+      const raw=(g('Category','Work_Register_Name','cr8fb_Work_Register_Name','category')||'').trim();
+      if(!raw) return '';
+      if(/^IRW$/i.test(raw)||/immediate/i.test(raw)) return 'IRW';
+      if(/^EW$/i.test(raw)||/emergent/i.test(raw)) return 'EW';
+      if(/^EPAR$/i.test(raw)||/repa/i.test(raw)) return 'EPAR';
       return raw;
     })(),
     damageNumber: dmgNo,
