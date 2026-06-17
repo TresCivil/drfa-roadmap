@@ -345,8 +345,8 @@ const AZURE_KEY='DTXUfyEzWP2xb64BDnP2NCE3qdKRl4rLskMDwixH83RcsbBkbMV4JQQJ99CFACY
 
 /* ── CATEGORY CONFIG ── */
 const CAT_CFG={
-  'IRW': {c:'#22C55E',glow:'rgba(34,197,94,.5)',   l:'rgba(34,197,94,.12)',  label:'Immediate Repair Works'},
-  'EW':  {c:'#F97316',glow:'rgba(249,115,22,.5)',  l:'rgba(249,115,22,.12)', label:'Emergency Works'},
+  'IRW': {c:'#22C55E',glow:'rgba(34,197,94,.5)',   l:'rgba(34,197,94,.12)',  label:'IRW - Immediate Reconstruction Works'},
+  'EW':  {c:'#F97316',glow:'rgba(249,115,22,.5)',  l:'rgba(249,115,22,.12)', label:'EW - Emergent Works'},
   'EPAR':{c:'#8B5CF6',glow:'rgba(139,92,246,.5)',  l:'rgba(139,92,246,.12)', label:'EPAR - Reconstruction Work'},
 };
 const cc=cat=>(CAT_CFG[cat]||{c:'#7A8BA8'}).c;
@@ -415,9 +415,9 @@ function normalise(raw){
     eventNo:      g('Event_No','AGRN_No.','cr8fb_AGRN_No','eventNo')                             || '',
     category:     (()=>{
       const raw=g('Category','Work_Register_Name','cr8fb_Work_Register_Name','category')||'';
-      if(/epar|reconstruction/i.test(raw)) return 'EPAR';
-      if(/irw|immediate/i.test(raw)) return 'IRW';
-      if(/^ew$|emergent/i.test(raw)) return 'EW';
+      if(/^IRW$|^irw$|immediate/i.test(raw)) return 'IRW';
+      if(/^EW$|^ew$|emergent/i.test(raw)) return 'EW';
+      if(/^EPAR$|^epar$|repa/i.test(raw)) return 'EPAR';
       return raw;
     })(),
     damageNumber: dmgNo,
@@ -425,8 +425,8 @@ function normalise(raw){
     roadName:     g('Road_Name','cr8fb_Road_Name','roadName')                                    || '',
     roadType:     g('Asset Type','cr8fb_AssetType','roadType')                                   || '',
     location:     g('LocationLevel1','Location - Level 1','cr8fb_cr8fb_LocationLevel1','location')|| '',
-    lat:          parseFloat(g('Latitude','cr8fb_Latitude','lat')||0),
-    lng:          parseFloat(g('Longitude','cr8fb_Longitude','lng')||0),
+    lat:          parseFloat(g('Latitude','cr8fb_Latitude','lat')||'') || 0,
+    lng:          parseFloat(g('Longitude','cr8fb_Longitude','lng')||'') || 0,
     parentID:     g('PROJECTSId','cr8fb_PROJECTSId','parentID')                                 || '',
     recoverRef:   dmgNo,
     pm:           g('PM','cr8fb_PM','pm')                                                        || '',
@@ -483,7 +483,7 @@ function loadFromHash(){
       return false;
     }
     const _all=rawRecords.map(normalise);
-    records=_all.filter(r=>r.lat!==0&&r.lng!==0&&!isNaN(r.lat)&&!isNaN(r.lng));
+    records=_all.filter(r=>!(r.lat===0&&r.lng===0)&&!isNaN(r.lat)&&!isNaN(r.lng)&&r.lat!==null&&r.lng!==null);
     allRecords=_all; // keep full set for no-GPS count
     const evKeys=[...new Set(records.map(r=>r.eventNo).filter(Boolean))].sort();
     if(evKeys.length) EVENT_KEYS.splice(0,EVENT_KEYS.length,...evKeys);
@@ -735,8 +735,21 @@ function renderList(){
   });
 
   const dmCount=vis.filter(r=>r.damageNumber).length;
-  const totalForEvent=allRecords.filter(r=>r.eventNo===activeEvent&&(filterHasDamage?r.damageNumber:true)).length;
-  const noGps=totalForEvent-vis.length;
+  // Count records matching all current filters but excluding GPS check
+  const q=filterSearch.toLowerCase();
+  const totalFiltered=allRecords.filter(r=>{
+    if(r.eventNo&&r.eventNo!==activeEvent)return false;
+    if(filterHasDamage&&!r.damageNumber)return false;
+    if(activeCategory&&r.category!==activeCategory)return false;
+    if(filterDamage&&r.damageNumber!==filterDamage)return false;
+    if(filterRoad&&r.roadName!==filterRoad)return false;
+    if(filterPM&&r.pm!==filterPM)return false;
+    if(filterPriority&&r.priority!==filterPriority)return false;
+    if(filterStatus&&r[activeStage]!==filterStatus)return false;
+    if(q){const fields=[r.damageNumber,r.roadName,r.location,r.pm,r.category,r.priority,r.status,r.damageDetails,r.roadType,r.depot,r.eventNo];if(!fields.some(v=>(v||'').toLowerCase().includes(q)))return false;}
+    return true;
+  }).length;
+  const noGps=totalFiltered-vis.length;
   const noGpsText=noGps>0?`<div style="font-size:10px;font-weight:500;color:#f59e0b;margin-top:1px;" title="${noGps} record(s) have no GPS coordinates">⚠ ${noGps} no GPS coordinates</div>`:'';
   document.getElementById('sideCount').innerHTML=`<div>${dmCount} damage record${dmCount!==1?'s':''}</div>${noGpsText}`;
 
@@ -1191,7 +1204,7 @@ window.addEventListener('hashchange', reloadData);
 /* ── BOOT ── */
 if(!loadFromHash()){
   const _all=DEMO.map(normalise);
-  records=_all.filter(r=>r.lat!==0&&r.lng!==0&&!isNaN(r.lat)&&!isNaN(r.lng));
+  records=_all.filter(r=>!(r.lat===0&&r.lng===0)&&!isNaN(r.lat)&&!isNaN(r.lng)&&r.lat!==null&&r.lng!==null);
   allRecords=_all;
   // Default to highest event number
   const evKeys=[...new Set(records.map(r=>r.eventNo).filter(Boolean))].sort();
