@@ -4,14 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DRFA Damage Map — Event &amp; Category View</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <!-- Azure Maps SDK -->
 <link rel="stylesheet" href="https://atlas.microsoft.com/sdk/javascript/mapcontrol/3/atlas.min.css"/>
 <script>window.__atlasReady=false;</script>
 <script src="https://atlas.microsoft.com/sdk/javascript/mapcontrol/3/atlas.min.js" async onload="window.__atlasReady=true;if(window.__bootDone)initMap();"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;background:#fff;color:#1a1a2e;overflow:hidden;-webkit-font-smoothing:antialiased}
+html,body{height:100%;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#fff;color:#1a1a2e;overflow:hidden;-webkit-font-smoothing:antialiased}
 :root{
   --surface:#fff;--surface2:#f5f7fa;--surface3:#e8edf5;
   --rim:rgba(0,0,0,0.07);--rim2:rgba(0,0,0,0.12);
@@ -291,7 +290,10 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
     <div id="sideHeader">
       <div id="sideHeaderTop">
         <span class="sh-count" id="sideCount">0 records</span>
-        <span class="sh-sort">Sort by: Recently Updated ▾</span>
+        <span id="shSort" style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;">
+          <span onclick="cycleSortOrder()" style="cursor:pointer;user-select:none;" title="Change sort field">Sort by: <span style="color:#1a1a2e;font-weight:700;">Recently Updated</span></span>
+          <span onclick="toggleSortDir()" style="cursor:pointer;user-select:none;font-size:13px;color:#1a1a2e;font-weight:700;" title="Toggle direction" id="shSortArrow">↓</span>
+        </span>
       </div>
     </div>
     <div id="sideList"></div>
@@ -659,7 +661,28 @@ function getFiltered(){
   });
 }
 
-/* ── STATUS CONFIG ── */
+let sortOrder='modifiedOn'; // 'modifiedOn' | 'roadName' | 'damageNumber'
+let sortAsc=false; // false = descending (newest first), true = ascending
+const SORT_LABELS={'modifiedOn':'Recently Updated','roadName':'Road Name','damageNumber':'Damage No.'};
+const SORT_KEYS=['modifiedOn','roadName','damageNumber'];
+function cycleSortOrder(){
+  const idx=SORT_KEYS.indexOf(sortOrder);
+  sortOrder=SORT_KEYS[(idx+1)%SORT_KEYS.length];
+  sortAsc=sortOrder!=='modifiedOn'; // default asc for text, desc for date
+  updateSortLabel();
+  renderList();
+}
+function toggleSortDir(){
+  sortAsc=!sortAsc;
+  updateSortLabel();
+  renderList();
+}
+function updateSortLabel(){
+  const arrow=document.getElementById('shSortArrow');
+  const label=document.querySelector('#shSort span span');
+  if(arrow) arrow.textContent=sortAsc?'↑':'↓';
+  if(label) label.textContent=SORT_LABELS[sortOrder];
+}
 const STATUS_CFG={
   'In Progress':              {bg:'#dbeafe',color:'#1d4ed8',label:'IN PROGRESS'},
   'Not Started':              {bg:'#f1f5f9',color:'#64748b',label:'NOT STARTED'},
@@ -687,17 +710,35 @@ function renderList(){
   const vis=getFiltered();
   // Sort by modifiedOn descending
   const sorted=[...vis].sort((a,b)=>{
-    if(!a.modifiedOn&&!b.modifiedOn)return 0;
-    if(!a.modifiedOn)return 1; if(!b.modifiedOn)return -1;
-    return new Date(b.modifiedOn)-new Date(a.modifiedOn);
+    let cmp=0;
+    if(sortOrder==='roadName'){
+      cmp=(a.roadName||'').localeCompare(b.roadName||'');
+    } else if(sortOrder==='damageNumber'){
+      cmp=(a.damageNumber||'').localeCompare(b.damageNumber||'');
+    } else {
+      if(!a.modifiedOn&&!b.modifiedOn){cmp=0;}
+      else if(!a.modifiedOn){cmp=1;}
+      else if(!b.modifiedOn){cmp=-1;}
+      else{cmp=new Date(b.modifiedOn)-new Date(a.modifiedOn);}
+    }
+    return sortAsc?-cmp:cmp;
   });
   const groups={};
   sorted.forEach(r=>{const k=r.roadName||'Unknown';if(!groups[k])groups[k]=[];groups[k].push(r);});
+  const sortedGroups=Object.entries(groups).sort((a,b)=>{
+    let cmp=0;
+    if(sortOrder==='roadName') cmp=a[0].localeCompare(b[0]);
+    else if(sortOrder==='damageNumber') cmp=(a[1][0].damageNumber||'').localeCompare(b[1][0].damageNumber||'');
+    else cmp=new Date(b[1][0].modifiedOn||0)-new Date(a[1][0].modifiedOn||0);
+    return sortAsc?-cmp:cmp;
+  });
 
   const dmCount=vis.filter(r=>r.damageNumber).length;
-  document.getElementById('sideCount').textContent=dmCount+' damage record'+(dmCount!==1?'s':'');
+  const noGps=records.filter(r=>r.eventNo===activeEvent&&(filterHasDamage?r.damageNumber:true)).length - vis.length;
+  const noGpsText=noGps>0?` <span style="font-size:11px;font-weight:500;color:#f59e0b;" title="${noGps} record(s) have no GPS coordinates">· ${noGps} no GPS</span>`:'';
+  document.getElementById('sideCount').innerHTML=dmCount+' damage record'+(dmCount!==1?'s':'')+noGpsText;
 
-  document.getElementById('sideList').innerHTML=Object.entries(groups).map(([road,items])=>{
+  document.getElementById('sideList').innerHTML=sortedGroups.map(([road,items])=>{
     if(groupOpen[road]===undefined)groupOpen[road]=true;
     const isOpen=groupOpen[road];
     const safeId='grp_'+road.replace(/[^a-z0-9]/gi,'_');
@@ -830,7 +871,7 @@ function pinSvg(col, cat){
     style="filter:drop-shadow(0 2px 3px ${col}88);display:block;">
     <path d="M19 2C10.7 2 4 8.7 4 17c0 11 15 31 15 31s15-20 15-31C34 8.7 27.3 2 19 2z" fill="${col}"/>
     <circle cx="19" cy="17" r="11" fill="rgba(255,255,255,0.95)"/>
-    <text x="19" y="21" text-anchor="middle" font-size="${fontSize}" font-weight="800" font-family="DM Sans,system-ui,sans-serif" fill="${col}" letter-spacing="-0.3">${cat}</text>
+    <text x="19" y="21" text-anchor="middle" font-size="${fontSize}" font-weight="800" font-family="Segoe UI,system-ui,sans-serif" fill="${col}" letter-spacing="-0.3">${cat}</text>
   </svg>`;
 }
 
