@@ -451,7 +451,7 @@ const STAGES=[
 ];
 
 /* ── STATE ── */
-let records=[], activeEvent='EN0001', activeCategory=null, filterDamage='', filterRoad='', filterPM='', filterPriority='', filterStatus='', filterHasDamage=true, filterSearch='', activeStage='status';
+let records=[], allRecords=[], activeEvent='EN0001', activeCategory=null, filterDamage='', filterRoad='', filterPM='', filterPriority='', filterStatus='', filterHasDamage=true, filterSearch='', activeStage='status';
 let azMap=null, popup=null, markers=[];
 const groupOpen={};
 const CAT_KEYS=['IRW','EW','EPAR'];
@@ -484,6 +484,7 @@ function loadFromHash(){
     }
     const _all=rawRecords.map(normalise);
     records=_all.filter(r=>r.lat!==0&&r.lng!==0&&!isNaN(r.lat)&&!isNaN(r.lng));
+    allRecords=_all; // keep full set for no-GPS count
     const evKeys=[...new Set(records.map(r=>r.eventNo).filter(Boolean))].sort();
     if(evKeys.length) EVENT_KEYS.splice(0,EVENT_KEYS.length,...evKeys);
     activeEvent=EVENT_KEYS[EVENT_KEYS.length-1]||'';
@@ -734,9 +735,10 @@ function renderList(){
   });
 
   const dmCount=vis.filter(r=>r.damageNumber).length;
-  const noGps=records.filter(r=>r.eventNo===activeEvent&&(filterHasDamage?r.damageNumber:true)).length - vis.length;
-  const noGpsText=noGps>0?` <span style="font-size:11px;font-weight:500;color:#f59e0b;" title="${noGps} record(s) have no GPS coordinates">· ${noGps} no GPS</span>`:'';
-  document.getElementById('sideCount').innerHTML=dmCount+' damage record'+(dmCount!==1?'s':'')+noGpsText;
+  const totalForEvent=allRecords.filter(r=>r.eventNo===activeEvent&&(filterHasDamage?r.damageNumber:true)).length;
+  const noGps=totalForEvent-vis.length;
+  const noGpsText=noGps>0?`<div style="font-size:10px;font-weight:500;color:#f59e0b;margin-top:1px;" title="${noGps} record(s) have no GPS coordinates">⚠ ${noGps} no GPS coordinates</div>`:'';
+  document.getElementById('sideCount').innerHTML=`<div>${dmCount} damage record${dmCount!==1?'s':''}</div>${noGpsText}`;
 
   document.getElementById('sideList').innerHTML=sortedGroups.map(([road,items])=>{
     if(groupOpen[road]===undefined)groupOpen[road]=true;
@@ -1190,6 +1192,7 @@ window.addEventListener('hashchange', reloadData);
 if(!loadFromHash()){
   const _all=DEMO.map(normalise);
   records=_all.filter(r=>r.lat!==0&&r.lng!==0&&!isNaN(r.lat)&&!isNaN(r.lng));
+  allRecords=_all;
   // Default to highest event number
   const evKeys=[...new Set(records.map(r=>r.eventNo).filter(Boolean))].sort();
   if(evKeys.length) EVENT_KEYS.splice(0,EVENT_KEYS.length,...evKeys);
