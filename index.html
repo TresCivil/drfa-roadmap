@@ -41,25 +41,25 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
 #filterbar-top{display:flex;align-items:center;justify-content:space-between;padding:6px 16px;background:#f8f9fb;border-bottom:1px solid var(--rim);}
 #filterbar-top-label{font-size:10px;font-weight:700;color:#9ca3af;letter-spacing:.08em;text-transform:uppercase;}
 #filterbar-top-right{display:flex;align-items:center;gap:12px;}
-#filterbar-filters{display:flex;align-items:flex-end;gap:8px;padding:6px 16px 8px;flex-wrap:wrap;}
+#filterbar-filters{display:flex;align-items:flex-end;gap:6px;padding:5px 12px;overflow-x:auto;flex-wrap:nowrap;}
 #filterbar-filters::-webkit-scrollbar{height:3px;}
 #filterbar-filters::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:2px;}
-.fb-group{display:flex;flex-direction:column;gap:3px;flex-shrink:0;}
-.fb-group-label{font-size:10px;font-weight:600;color:#9ca3af;white-space:nowrap;letter-spacing:.03em;}
-.fb-select{height:34px;padding:0 28px 0 10px;font-family:inherit;font-size:12px;border:1.5px solid #e5e7eb;border-radius:8px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239ca3af'/%3E%3C/svg%3E") no-repeat right 8px center;-webkit-appearance:none;appearance:none;color:#1a1a2e;outline:none;cursor:pointer;transition:border-color .15s;min-width:120px;}
+.fb-group{display:flex;flex-direction:column;gap:2px;flex-shrink:0;}
+.fb-group-label{font-size:9px;font-weight:600;color:#9ca3af;white-space:nowrap;letter-spacing:.03em;}
+.fb-select{height:30px;padding:0 22px 0 8px;font-family:inherit;font-size:11px;border:1.5px solid #e5e7eb;border-radius:6px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239ca3af'/%3E%3C/svg%3E") no-repeat right 8px center;-webkit-appearance:none;appearance:none;color:#1a1a2e;outline:none;cursor:pointer;transition:border-color .15s;min-width:85px;max-width:150px;}
 .fb-select:focus{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.1);}
 .fb-select:disabled{opacity:.45;cursor:not-allowed;}
 .fb-select option{background:#fff;}
 #filterbar-search{display:flex;flex-direction:column;gap:3px;}
 #filterbar-search .fb-group-label{font-size:10px;font-weight:600;color:#9ca3af;}
-#sideSearch{display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;padding:0 10px;height:34px;transition:border-color .15s;min-width:180px;}
+#sideSearch{display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #e5e7eb;border-radius:8px;padding:0 10px;height:30px;transition:border-color .15s;min-width:130px;}
 #sideSearch:focus-within{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.1);}
 #sideSearch svg{flex-shrink:0;color:#9ca3af;}
 #sideSearchInput{border:none;outline:none;font-family:inherit;font-size:12px;color:var(--text);background:transparent;width:100%;min-width:0;}
 #sideSearchInput::placeholder{color:#9ca3af;}
 #sideSearchClear{background:none;border:none;cursor:pointer;color:#9ca3af;font-size:14px;padding:0;line-height:1;display:none;flex-shrink:0;}
 #sideSearchClear:hover{color:#1a1a2e;}
-.fb-sep{width:1px;height:34px;background:#e5e7eb;flex-shrink:0;margin:0 2px;align-self:flex-end;}
+.fb-sep{width:1px;height:30px;background:#e5e7eb;flex-shrink:0;margin:0 2px;align-self:flex-end;}
 .conn-badge{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);}
 .conn-dot{width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 8px rgba(16,185,129,.4);flex-shrink:0;}
 .clear-btn{display:flex;align-items:center;gap:5px;height:26px;padding:0 10px;font-family:inherit;font-size:11px;font-weight:600;border:1.5px solid var(--rim2);border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;}
@@ -270,7 +270,7 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
     <!-- Checkbox aligned with filters -->
     <div class="fb-group">
       <div class="fb-group-label">&nbsp;</div>
-      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;user-select:none;height:34px;padding:0 4px;">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;user-select:none;height:30px;padding:0 4px;">
         <input type="checkbox" id="hasDamageBtn" checked onchange="toggleHasDamage()" style="width:13px;height:13px;cursor:pointer;accent-color:#1a1a2e;">
         Show all Roads with DM No.
       </label>
@@ -279,7 +279,7 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
     <!-- Clear button aligned with filters -->
     <div class="fb-group">
       <div class="fb-group-label">&nbsp;</div>
-      <button class="clear-btn" onclick="clearFilters()" style="height:34px;border-radius:8px;padding:0 14px;font-size:12px;">✕ Clear filters</button>
+      <button class="clear-btn" onclick="clearFilters()" style="height:30px;border-radius:6px;padding:0 12px;font-size:11px;">✕ Clear filters</button>
     </div>
   </div>
 </div>
