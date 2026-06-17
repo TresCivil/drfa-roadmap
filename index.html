@@ -175,7 +175,8 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
 .event-tab.active{background:#fff;color:#1a1a2e;box-shadow:0 1px 4px rgba(0,0,0,.12)}
 .event-tab:hover:not(.active){color:#1a1a2e}
 
-/* ── LOADING OVERLAY ── */
+/* ── SELECTED PIN ── */
+.pin-selected .pin-inner svg{filter:drop-shadow(0 0 8px rgba(99,102,241,.8)) brightness(1.15);transform:scale(1.25);transform-origin:bottom center;transition:all .2s ease;}
 #mapLoader{position:absolute;top:0;left:0;right:0;bottom:0;z-index:100;background:rgba(255,255,255,0.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:opacity .5s ease;}
 #mapLoader.hidden{opacity:0;pointer-events:none;}
 #mapLoader.gone{display:none;}
@@ -345,9 +346,9 @@ const AZURE_KEY='DTXUfyEzWP2xb64BDnP2NCE3qdKRl4rLskMDwixH83RcsbBkbMV4JQQJ99CFACY
 
 /* ── CATEGORY CONFIG ── */
 const CAT_CFG={
-  'IRW': {c:'#22C55E',glow:'rgba(34,197,94,.5)',   l:'rgba(34,197,94,.12)',  label:'IRW - Immediate Reconstruction Works'},
-  'EW':  {c:'#F97316',glow:'rgba(249,115,22,.5)',  l:'rgba(249,115,22,.12)', label:'EW - Emergent Works'},
-  'EPAR':{c:'#8B5CF6',glow:'rgba(139,92,246,.5)',  l:'rgba(139,92,246,.12)', label:'EPAR - Reconstruction Work'},
+  'IRW': {c:'#14B8A6',glow:'rgba(20,184,166,.5)',  l:'rgba(20,184,166,.12)', label:'IRW - Immediate Reconstruction Works'},
+  'EW':  {c:'#2563EB',glow:'rgba(37,99,235,.5)',   l:'rgba(37,99,235,.12)',  label:'EW - Emergent Works'},
+  'EPAR':{c:'#5B03FF',glow:'rgba(91,3,255,.5)',    l:'rgba(91,3,255,.12)',   label:'EPAR - Reconstruction Work'},
 };
 const cc=cat=>(CAT_CFG[cat]||{c:'#7A8BA8'}).c;
 const cl=cat=>(CAT_CFG[cat]||{l:'rgba(0,0,0,.05)'}).l;
@@ -453,7 +454,19 @@ const STAGES=[
 
 /* ── STATE ── */
 let records=[], allRecords=[], activeEvent='EN0001', activeCategory=null, filterDamage='', filterRoad='', filterPM='', filterPriority='', filterStatus='', filterHasDamage=true, filterSearch='', activeStage='status';
-let azMap=null, popup=null, markers=[];
+let azMap=null, popup=null, markers=[], selectedMarker=null;
+
+function highlightPin(marker){
+  if(selectedMarker){
+    const el=selectedMarker.getElement();
+    if(el) el.classList.remove('pin-selected');
+  }
+  selectedMarker=marker;
+  if(marker){
+    const el=marker.getElement();
+    if(el) el.classList.add('pin-selected');
+  }
+}
 const groupOpen={};
 const CAT_KEYS=['IRW','EW','EPAR'];
 let EVENT_KEYS=['EN0001','EN0002'];
@@ -887,7 +900,7 @@ function pinSvg(col, cat){
     style="filter:drop-shadow(0 2px 3px ${col}88);display:block;">
     <path d="M19 2C10.7 2 4 8.7 4 17c0 11 15 31 15 31s15-20 15-31C34 8.7 27.3 2 19 2z" fill="${col}"/>
     <circle cx="19" cy="17" r="11" fill="rgba(255,255,255,0.95)"/>
-    <text x="19" y="21" text-anchor="middle" font-size="${fontSize}" font-weight="800" font-family="Segoe UI,system-ui,sans-serif" fill="${col}" letter-spacing="-0.3">${cat}</text>
+    <text x="19" y="21" text-anchor="middle" font-size="${fontSize}" font-weight="400" font-family="Segoe UI,system-ui,sans-serif" fill="${col}" letter-spacing="-0.3">${cat}</text>
   </svg>`;
 }
 
@@ -951,6 +964,7 @@ function updatePins(){
         azMap.markers.add(marker);
         markers.push({marker,record:rec});
         azMap.events.add('click',marker,()=>{
+          highlightPin(marker);
           showFloatPopup(rec);
           highlightList(rec);
           postUp({type:'PIN_CLICK',damageNumber:rec.damageNumber,category:rec.category,eventNo:rec.eventNo,lat:rec.lat,lng:rec.lng});
@@ -1009,6 +1023,7 @@ function showFloatPopup(r){
 function closeFloatPopup(){
   document.getElementById('detailPanel').classList.remove('open');
   document.querySelectorAll('.list-card').forEach(el=>el.classList.remove('active'));
+  highlightPin(null);
   _dpRecord=null;
 }
 function switchDpTab(tab,btn){
@@ -1155,6 +1170,8 @@ function flyToRecord(idx){
   const r=records[idx]; if(!r||!azMap)return;
   azMap.setCamera({center:[r.lng,r.lat],zoom:14,duration:800,type:'fly'});
   setTimeout(()=>{
+    const found=markers.find(m=>m.record===r);
+    if(found) highlightPin(found.marker);
     showFloatPopup(r);
     highlightList(r);
   },900);
