@@ -359,11 +359,11 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
             <select id="edit-pm" class="dp-edit-select"></select>
           </div>
           <div class="dp-edit-field">
-            <label class="dp-edit-label">Construction Start</label>
+            <label class="dp-edit-label">Contractor Start</label>
             <input type="date" id="edit-construction-start" class="dp-edit-input">
           </div>
           <div class="dp-edit-field">
-            <label class="dp-edit-label">Construction End</label>
+            <label class="dp-edit-label">Contractor End</label>
             <input type="date" id="edit-construction-end" class="dp-edit-input">
           </div>
           <div class="dp-edit-field">
@@ -479,8 +479,8 @@ function normalise(raw){
     estimatedStatus:g('Estimated_Status','estimatedStatus')                                         || '',
     approvalStatus: g('Approval_Status','approvalStatus')                                           || '',
     modifiedOn:        g('Modified_On','modifiedOn','modifiedon')                                      || '',
-    constructionStart: g('Construction_Start','constructionStart')                                     || '',
-    constructionEnd:   g('Construction_End','constructionEnd')                                         || '',
+    constructionStart: g('Contractor_Start','constructionStart')                                     || '',
+    constructionEnd:   g('Contractor_End','constructionEnd')                                         || '',
     constructionTeam:  g('Construction_Team','constructionTeam')                                       || '',
     comments:          g('Comments','comments')                                                         || '',
   };
@@ -1100,9 +1100,9 @@ function renderDpTab(){
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-1a4 4 0 0 1 8 0v1"/><circle cx="8" cy="6" r="3"/></svg>`,
        label:'PM', val:r.pm||'—'},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M5 2v2M11 2v2M2 7h12M5 10h2"/></svg>`,
-       label:'Construction Start', val:r.constructionStart?fmtDate(r.constructionStart):'—'},
+       label:'Contractor Start', val:r.constructionStart?fmtDate(r.constructionStart):'—'},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M5 2v2M11 2v2M2 7h12M9 10h2"/></svg>`,
-       label:'Construction End', val:r.constructionEnd?fmtDate(r.constructionEnd):'—'},
+       label:'Contractor End', val:r.constructionEnd?fmtDate(r.constructionEnd):'—'},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 13v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1"/><circle cx="8" cy="5" r="3"/></svg>`,
        label:'Construction Team', val:r.constructionTeam||'—'},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H5l-3 2V4a1 1 0 0 1 1-1z"/></svg>`,
