@@ -765,7 +765,15 @@ const PRIORITY_CFG={
 function fmtDate(d){
   if(!d)return'';
   try{
-    const dt=new Date(d);
+    let dt;
+    // Handle dd/mm/yyyy hh:mm:ss format from Power Apps
+    if(typeof d==='string'&&/^\d{1,2}\/\d{1,2}\/\d{4}/.test(d)){
+      const parts=d.split(/[\/ :]/);
+      dt=new Date(parts[2],parts[1]-1,parts[0],parts[3]||0,parts[4]||0,parts[5]||0);
+    } else {
+      dt=new Date(d);
+    }
+    if(isNaN(dt))return d;
     const date=dt.toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});
     const time=dt.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit',hour12:true});
     return date+' '+time;
@@ -1305,7 +1313,7 @@ function saveDpEdit(){
   changedFields.filter(x=>x.nv&&x.nv!==x.ov).forEach(x=>{
     activityTrail.unshift({
       Damage_Number:_dpRecord.damageNumber,
-      Modified_On:new Date().toLocaleString('en-AU'),
+      Modified_On:new Date().toISOString(),
       Modified_By:currentUser||'You',
       Modified_Field:x.f,
       Modified_To:x.nv
