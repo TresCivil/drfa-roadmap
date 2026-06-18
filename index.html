@@ -1071,12 +1071,14 @@ let _dpRecord=null, _dpTab='details';
 function showFloatPopup(r){
   _dpRecord=r; _dpTab='details';
   const col=cc(r.category);
-  const sc=STATUS_CFG[r.status]||{bg:'#f1f5f9',color:'#64748b',label:(r.status||'—').toUpperCase()};
+  const sc=STATUS_CFG[r.status]||{bg:'rgba(75,85,99,0.08)',color:'#4B5563',label:(r.status||'—').toUpperCase()};
   document.getElementById('dp-ref').textContent=r.damageNumber||r.roadName||'—';
   const badge=document.getElementById('dp-status-badge');
   badge.textContent=sc.label; badge.style.background=sc.bg; badge.style.color=sc.color;
-  // colour header accent
   document.getElementById('dp-header').style.borderTop=`3px solid ${col}`;
+  // Reset all tabs to default, activate Details
+  document.querySelectorAll('.dp-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.dp-tab')[0].classList.add('active');
   renderDpTab();
   document.getElementById('detailPanel').classList.add('open');
 }
