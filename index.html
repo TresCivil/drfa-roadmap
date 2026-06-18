@@ -746,16 +746,18 @@ function updateSortLabel(){
   if(label) label.textContent=SORT_LABELS[sortOrder];
 }
 const STATUS_CFG={
-  'In Progress':              {bg:'#dbeafe',color:'#1d4ed8',label:'IN PROGRESS'},
-  'Not Started':              {bg:'#f1f5f9',color:'#64748b',label:'NOT STARTED'},
-  'Not required':             {bg:'#faf5ff',color:'#7e22ce',label:'NOT REQUIRED'},
-  'Completed':                {bg:'#dcfce7',color:'#15803d',label:'COMPLETED'},
-  'Complete - No Work Required':{bg:'#fef9c3',color:'#a16207',label:'COMPLETE - NO WORK REQUIRED'},
+  'In Progress':              {bg:'rgba(222,140,0,0.08)',  color:'#DE8C00', label:'IN PROGRESS'},
+  'Not Started':              {bg:'rgba(75,85,99,0.08)',   color:'#4B5563', label:'NOT STARTED'},
+  'Not required':             {bg:'rgba(75,85,99,0.08)',   color:'#4B5563', label:'NOT REQUIRED'},
+  'Not Required':             {bg:'rgba(75,85,99,0.08)',   color:'#4B5563', label:'NOT REQUIRED'},
+  'Completed':                {bg:'rgba(20,184,166,0.08)', color:'#14B8A6', label:'COMPLETED'},
+  'Complete - No Work Required':{bg:'rgba(59,130,246,0.08)',color:'#3B82F6',label:'COMPLETE - NO WORK REQUIRED'},
 };
 const PRIORITY_CFG={
-  'High':  {color:'#ef4444'},
-  'Medium':{color:'#f59e0b'},
-  'Low':   {color:'#22c55e'},
+  'High':    {color:'#ef4444'},
+  'Medium':  {color:'#f59e0b'},
+  'Low':     {color:'#22c55e'},
+  'Critical':{color:'#dc2626'},
 };
 function fmtDate(d){
   if(!d)return'';
@@ -821,14 +823,14 @@ function renderList(){
     const cards=items.map(r=>{
       const col=cc(r.category), bg=cl(r.category), gi=records.indexOf(r);
       const stageVal=r[activeStage]||r.status||'';
-      const sc=STATUS_CFG[stageVal]||{bg:'#f1f5f9',color:'#64748b',label:(stageVal||'—').toUpperCase()};
+      const sc=STATUS_CFG[stageVal]||{bg:'rgba(75,85,99,0.08)',color:'#4B5563',label:(stageVal||'—').toUpperCase()};
       const pc=PRIORITY_CFG[r.priority]||{color:'#9ca3af'};
       return `<div class="list-card" id="li-${gi}" onclick="flyToRecord(${gi})" style="border-left:3px solid ${col};">
         <div class="card-top">
           <span style="font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:600;color:#111827;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.damageNumber||'No Number'}</span>
           <span class="card-arrow">›</span>
         </div>
-        <div style="margin-bottom:5px;"><span style="font-family:'Segoe UI',sans-serif;font-size:12px;font-weight:700;color:${col};text-transform:uppercase;">${sc.label}</span></div>
+        <div style="margin-bottom:5px;"><span style="font-family:'Segoe UI',sans-serif;font-size:12px;font-weight:700;color:${sc.color};background:${sc.bg};padding:2px 8px;border-radius:5px;text-transform:uppercase;display:inline-block;">${sc.label}</span></div>
         <div style="font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:600;color:#111827;margin-bottom:3px;line-height:1.4;">${r.location||'—'}</div>
         <div style="font-family:'Segoe UI',sans-serif;font-size:13px;font-weight:400;color:#4B5563;margin-bottom:4px;">👤 ${r.pm||'—'}</div>
         <div class="card-meta">
@@ -1166,46 +1168,39 @@ function renderDpTab(){
     break;}
     case 'history':{
     const r=_dpRecord;
-    // Match activity trail by damage number
     const trail=activityTrail
       .filter(a=>(a.Damage_Number||a.damage_Number||'')===r.damageNumber)
       .sort((a,b)=>new Date(b.Modified_On||b.modified_On||0)-new Date(a.Modified_On||a.modified_On||0));
 
-    // Demo fallback
-    const demoTrail=[
-      {Modified_On:r.modifiedOn,Modified_By:r.pm||'System',Modified_Field:'Construction Status',Modified_To:r.status||'—'},
-    ];
-    const items=trail.length?trail:demoTrail;
-
     document.getElementById('dp-body').innerHTML=`
       <div style="padding:12px 16px;">
-        <div style="font-size:11px;font-weight:600;color:#9ca3af;margin-bottom:12px;letter-spacing:.04em;">ACTIVITY TRAIL (${items.length})</div>
-        ${items.length===0?`<div style="font-size:12px;color:var(--muted);text-align:center;padding:24px 0;">No activity recorded</div>`:''}
-        <div style="display:flex;flex-direction:column;gap:0;">
-          ${items.map((a,i)=>{
+        <div style="font-size:11px;font-weight:600;color:#9ca3af;margin-bottom:12px;letter-spacing:.04em;">ACTIVITY TRAIL (${trail.length})</div>
+        ${trail.length===0
+          ?`<div style="text-align:center;padding:24px 0;color:#9ca3af;font-size:12px;">No activity recorded</div>`
+          :`<div style="display:flex;flex-direction:column;gap:0;">
+          ${trail.map((a,i)=>{
             const dt=a.Modified_On||a.modified_On||'';
             const by=a.Modified_By||a.modified_By||'—';
             const field=a.Modified_Field||a.modified_Field||'—';
             const to=a.Modified_To||a.modified_To||'—';
-            const isLast=i===items.length-1;
+            const isLast=i===trail.length-1;
             return `<div style="display:flex;gap:12px;padding-bottom:${isLast?'0':'16px'};">
-              <!-- Timeline -->
               <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;padding-top:2px;">
-                <div style="width:9px;height:9px;border-radius:50%;background:#6366F1;flex-shrink:0;"></div>
+                <div style="width:9px;height:9px;border-radius:50%;background:#2563EB;flex-shrink:0;"></div>
                 ${!isLast?`<div style="width:1px;flex:1;background:#e5e7eb;margin-top:3px;"></div>`:''}
               </div>
-              <!-- Content -->
               <div style="flex:1;min-width:0;padding-bottom:${isLast?'0':'4px'};">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
                   <span style="font-size:11px;font-weight:700;color:var(--text);">${field}</span>
                   <span style="font-size:10px;color:#9ca3af;white-space:nowrap;margin-left:8px;">${dt?fmtDate(dt):''}</span>
                 </div>
-                <div style="font-size:12px;color:#4F46E5;font-weight:600;margin-bottom:2px;">→ ${to}</div>
+                <div style="font-size:12px;color:#2563EB;font-weight:600;margin-bottom:2px;">→ ${to}</div>
                 <div style="font-size:11px;color:var(--muted);">by ${by}</div>
               </div>
             </div>`;
           }).join('')}
-        </div>
+        </div>`
+        }
       </div>`;
     break;}
   }// end switch
@@ -1225,15 +1220,15 @@ function toggleDpEdit(){
   // Populate Status dropdown
   const stSel=document.getElementById('edit-status');
   const stVals=statusOptions.length?statusOptions.map(o=>o.Name):['Not Started','Not required','In Progress','Completed','Complete - No Work Required'];
-  stSel.innerHTML=stVals.map(v=>`<option value="${v}"${r.status===v?' selected':''}>${v}</option>`).join('');
+  stSel.innerHTML=`<option value="">— Select Status —</option>`+stVals.map(v=>`<option value="${v}"${r.status===v?' selected':''}>${v}</option>`).join('');
   // Populate Priority dropdown
   const prSel=document.getElementById('edit-priority');
   const prVals=priorityOptions.length?priorityOptions.map(o=>o.Name):['High','Medium','Low'];
-  prSel.innerHTML=prVals.map(v=>`<option value="${v}"${r.priority===v?' selected':''}>${v}</option>`).join('');
+  prSel.innerHTML=`<option value="">— Select Priority —</option>`+prVals.map(v=>`<option value="${v}"${r.priority===v?' selected':''}>${v}</option>`).join('');
   // Populate PM dropdown
   const pmSel=document.getElementById('edit-pm');
   const pmVals=pmOptions.length?pmOptions.map(o=>o.Name):[...new Set(records.map(x=>x.pm).filter(Boolean))].sort();
-  pmSel.innerHTML=pmVals.map(v=>`<option value="${v}"${r.pm===v?' selected':''}>${v}</option>`).join('');
+  pmSel.innerHTML=`<option value="">— Select PM —</option>`+pmVals.map(v=>`<option value="${v}"${r.pm===v?' selected':''}>${v}</option>`).join('');
   // Populate date fields
   const toDateInput=d=>{if(!d)return'';try{const dt=new Date(d);return dt.toISOString().split('T')[0];}catch(e){return'';}};
   document.getElementById('edit-construction-start').value=toDateInput(r.constructionStart);
@@ -1292,6 +1287,26 @@ function saveDpEdit(){
       orig_constructionTeam:_dpRecord._orig_constructionTeam||'',
       orig_comments:_dpRecord._orig_comments||''
     }
+  });
+  // Append to local activityTrail so History tab updates immediately
+  const now=new Date().toLocaleString('en-AU');
+  const changedFields=[
+    {f:'Construction Status', nv:updated.status,             ov:_dpRecord._orig_status||''},
+    {f:'Priority',            nv:updated.priority,           ov:_dpRecord._orig_priority||''},
+    {f:'PM',                  nv:updated.pm,                 ov:_dpRecord._orig_pm||''},
+    {f:'Contractor Start Date',nv:updated.constructionStart, ov:_dpRecord._orig_constructionStart||''},
+    {f:'Contractor End Date',  nv:updated.constructionEnd,   ov:_dpRecord._orig_constructionEnd||''},
+    {f:'Contractor Assigned',  nv:updated.constructionTeam,  ov:_dpRecord._orig_constructionTeam||''},
+    {f:'Comments',             nv:updated.comments,          ov:_dpRecord._orig_comments||''},
+  ];
+  changedFields.filter(x=>x.nv&&x.nv!==x.ov).forEach(x=>{
+    activityTrail.unshift({
+      Damage_Number:_dpRecord.damageNumber,
+      Modified_On:now,
+      Modified_By:'You',
+      Modified_Field:x.f,
+      Modified_To:x.nv
+    });
   });
   closeDpEdit();
   // Refresh panel
