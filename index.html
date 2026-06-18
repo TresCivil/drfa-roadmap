@@ -175,7 +175,13 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
 .event-tab.active{background:#fff;color:#1a1a2e;box-shadow:0 1px 4px rgba(0,0,0,.12)}
 .event-tab:hover:not(.active){color:#1a1a2e}
 
-/* ── SELECTED PIN ── */
+/* ── EDIT PANEL ── */
+.dp-edit-field{display:flex;flex-direction:column;gap:4px;}
+.dp-edit-label{font-size:11px;font-weight:600;color:#686C75;}
+.dp-edit-select,.dp-edit-input{height:36px;padding:0 10px;font-family:'Segoe UI',sans-serif;font-size:13px;color:#111827;border:1.5px solid #e5e7eb;border-radius:8px;background:#fff;outline:none;width:100%;transition:border-color .15s;}
+.dp-edit-select:focus,.dp-edit-input:focus{border-color:#2563EB;box-shadow:0 0 0 2px rgba(37,99,235,.1);}
+.dp-edit-textarea{padding:8px 10px;font-family:'Segoe UI',sans-serif;font-size:13px;color:#111827;border:1.5px solid #e5e7eb;border-radius:8px;background:#fff;outline:none;width:100%;resize:vertical;transition:border-color .15s;}
+.dp-edit-textarea:focus{border-color:#2563EB;box-shadow:0 0 0 2px rgba(37,99,235,.1);}
 .pin-selected .pin-inner svg{filter:drop-shadow(0 0 8px rgba(99,102,241,.8)) brightness(1.15);transform:scale(1.25);transform-origin:bottom center;transition:all .2s ease;}
 #mapLoader{position:absolute;top:0;left:0;right:0;bottom:0;z-index:100;background:rgba(255,255,255,0.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:opacity .5s ease;}
 #mapLoader.hidden{opacity:0;pointer-events:none;}
@@ -328,10 +334,47 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
       </div>
       <div id="dp-body"></div>
       <div id="dp-footer">
-        <button id="dp-edit-btn" onclick="dpEditRecord()">
+        <button id="dp-edit-btn" onclick="toggleDpEdit()">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9.5 2.5l2 2-7 7H2.5v-2l7-7z" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg>
           Edit Record
         </button>
+      </div>
+      <!-- Inline edit panel -->
+      <div id="dp-edit-panel" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:#fff;z-index:10;display:none;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--rim);flex-shrink:0;">
+          <span style="font-size:14px;font-weight:700;color:#111827;">Edit Record</span>
+          <button onclick="closeDpEdit()" style="background:none;border:none;cursor:pointer;font-size:16px;color:#6b7280;">✕</button>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:12px;">
+          <div class="dp-edit-field">
+            <label class="dp-edit-label">Status</label>
+            <select id="edit-status" class="dp-edit-select"></select>
+          </div>
+          <div class="dp-edit-field">
+            <label class="dp-edit-label">Priority</label>
+            <select id="edit-priority" class="dp-edit-select"></select>
+          </div>
+          <div class="dp-edit-field">
+            <label class="dp-edit-label">PM</label>
+            <select id="edit-pm" class="dp-edit-select"></select>
+          </div>
+          <div class="dp-edit-field">
+            <label class="dp-edit-label">Construction Start</label>
+            <input type="date" id="edit-construction-start" class="dp-edit-input">
+          </div>
+          <div class="dp-edit-field">
+            <label class="dp-edit-label">Construction End</label>
+            <input type="date" id="edit-construction-end" class="dp-edit-input">
+          </div>
+          <div class="dp-edit-field">
+            <label class="dp-edit-label">Comments</label>
+            <textarea id="edit-comments" class="dp-edit-textarea" rows="3" placeholder="Add comments…"></textarea>
+          </div>
+        </div>
+        <div style="padding:12px 16px;border-top:1px solid var(--rim);display:flex;gap:8px;flex-shrink:0;">
+          <button onclick="saveDpEdit()" style="flex:1;padding:10px;background:#2563EB;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">Save Changes</button>
+          <button onclick="closeDpEdit()" style="padding:10px 16px;background:#f5f7fa;color:#6b7280;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>
+        </div>
       </div>
   </div>
 </div>
@@ -435,7 +478,11 @@ function normalise(raw){
     pickupStatus:   g('Pickup_Status','Pick_up_Status','pickupStatus')                              || '',
     estimatedStatus:g('Estimated_Status','estimatedStatus')                                         || '',
     approvalStatus: g('Approval_Status','approvalStatus')                                           || '',
-    modifiedOn:     g('Modified_On','modifiedOn','modifiedon')                                      || '',
+    modifiedOn:        g('Modified_On','modifiedOn','modifiedon')                                      || '',
+    constructionStart: g('Construction_Start','constructionStart')                                     || '',
+    constructionEnd:   g('Construction_End','constructionEnd')                                         || '',
+    constructionTeam:  g('Construction_Team','constructionTeam')                                       || '',
+    comments:          g('Comments','comments')                                                         || '',
   };
 }
 
@@ -1044,14 +1091,22 @@ function renderDpTab(){
        label:'Location', val:r.roadName+(r.lat?` / ${r.lat.toFixed(4)}°, ${r.lng.toFixed(4)}°`:'')},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12M2 8h12M2 12h8"/></svg>`,
        label:'Damage Details', val:r.location||'—'},
+      {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12v8H2zM2 4l4 4 2-2 4 4"/></svg>`,
+       label:'Stage', val:activeStage?(STAGES.find(s=>s.key===activeStage)?.label+' Status'||'—'):'— (select a stage)'},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>`,
        label:'Status', val:r.status||'—', isStatus:true},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2"/></svg>`,
        label:'Priority', val:r.priority||'—', isPriority:true},
-      {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12v8H2zM2 4l4 4 2-2 4 4"/></svg>`,
-       label:'Stage', val:activeStage?(STAGES.find(s=>s.key===activeStage)?.label+' Status'||'—'):'— (select a stage)'},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-1a4 4 0 0 1 8 0v1"/><circle cx="8" cy="6" r="3"/></svg>`,
        label:'PM', val:r.pm||'—'},
+      {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M5 2v2M11 2v2M2 7h12M5 10h2"/></svg>`,
+       label:'Construction Start', val:r.constructionStart?fmtDate(r.constructionStart):'—'},
+      {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M5 2v2M11 2v2M2 7h12M9 10h2"/></svg>`,
+       label:'Construction End', val:r.constructionEnd?fmtDate(r.constructionEnd):'—'},
+      {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 13v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1"/><circle cx="8" cy="5" r="3"/></svg>`,
+       label:'Construction Team', val:r.constructionTeam||'—'},
+      {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H5l-3 2V4a1 1 0 0 1 1-1z"/></svg>`,
+       label:'Comments', val:r.comments||'—'},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M5 2v2M11 2v2M2 7h12"/></svg>`,
        label:'Modified On', val:r.modifiedOn?fmtDate(r.modifiedOn):'—'},
     ];
@@ -1151,9 +1206,76 @@ function renderDpTab(){
     break;}
   }// end switch
 }
+function toggleDpEdit(){
+  const r=_dpRecord; if(!r)return;
+  const panel=document.getElementById('dp-edit-panel');
+  panel.style.display='flex';
+  // Populate Status dropdown
+  const stSel=document.getElementById('edit-status');
+  const stVals=statusOptions.length?statusOptions.map(o=>o.Name):['Not Started','Not required','In Progress','Completed','Complete - No Work Required'];
+  stSel.innerHTML=stVals.map(v=>`<option value="${v}"${r.status===v?' selected':''}>${v}</option>`).join('');
+  // Populate Priority dropdown
+  const prSel=document.getElementById('edit-priority');
+  const prVals=priorityOptions.length?priorityOptions.map(o=>o.Name):['High','Medium','Low'];
+  prSel.innerHTML=prVals.map(v=>`<option value="${v}"${r.priority===v?' selected':''}>${v}</option>`).join('');
+  // Populate PM dropdown
+  const pmSel=document.getElementById('edit-pm');
+  const pmVals=pmOptions.length?pmOptions.map(o=>o.Name):[...new Set(records.map(x=>x.pm).filter(Boolean))].sort();
+  pmSel.innerHTML=pmVals.map(v=>`<option value="${v}"${r.pm===v?' selected':''}>${v}</option>`).join('');
+  // Populate date fields
+  const toDateInput=d=>{if(!d)return'';try{const dt=new Date(d);return dt.toISOString().split('T')[0];}catch(e){return'';}};
+  document.getElementById('edit-construction-start').value=toDateInput(r.constructionStart);
+  document.getElementById('edit-construction-end').value=toDateInput(r.constructionEnd);
+  document.getElementById('edit-comments').value=r.comments||'';
+}
+function closeDpEdit(){
+  document.getElementById('dp-edit-panel').style.display='none';
+}
+function saveDpEdit(){
+  if(!_dpRecord)return;
+  const updated={
+    type:'SAVE_RECORD',
+    damageNumber:_dpRecord.damageNumber,
+    parentID:_dpRecord.parentID,
+    category:_dpRecord.category,
+    eventNo:_dpRecord.eventNo,
+    status:document.getElementById('edit-status').value,
+    priority:document.getElementById('edit-priority').value,
+    pm:document.getElementById('edit-pm').value,
+    constructionStart:document.getElementById('edit-construction-start').value,
+    constructionEnd:document.getElementById('edit-construction-end').value,
+    comments:document.getElementById('edit-comments').value,
+  };
+  // Update local record
+  _dpRecord.status=updated.status;
+  _dpRecord.priority=updated.priority;
+  _dpRecord.pm=updated.pm;
+  _dpRecord.constructionStart=updated.constructionStart;
+  _dpRecord.constructionEnd=updated.constructionEnd;
+  _dpRecord.comments=updated.comments;
+  // Send to Power Apps
+  postUp(updated);
+  closeDpEdit();
+  // Refresh panel
+  renderDpTab();
+  renderList();
+  updatePins();
+}
 function dpEditRecord(){
   if(!_dpRecord)return;
-  postUp({type:'EDIT_RECORD',damageNumber:_dpRecord.damageNumber,parentID:_dpRecord.parentID,category:_dpRecord.category,eventNo:_dpRecord.eventNo});
+  postUp({
+    type:'EDIT_RECORD',
+    damageNumber:_dpRecord.damageNumber,
+    parentID:_dpRecord.parentID,
+    category:_dpRecord.category,
+    eventNo:_dpRecord.eventNo,
+    status:_dpRecord.status,
+    priority:_dpRecord.priority,
+    pm:_dpRecord.pm,
+    constructionStart:_dpRecord.constructionStart,
+    constructionEnd:_dpRecord.constructionEnd,
+    comments:_dpRecord.comments
+  });
 }
 /* legacy — kept for compatibility */
 function popupHtml(r){ return ''; }
