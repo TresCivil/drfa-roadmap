@@ -1214,6 +1214,14 @@ function toggleDpEdit(){
   const r=_dpRecord; if(!r)return;
   const panel=document.getElementById('dp-edit-panel');
   panel.style.display='flex';
+  // Store originals for change detection
+  _dpRecord._orig_status=r.status||'';
+  _dpRecord._orig_priority=r.priority||'';
+  _dpRecord._orig_pm=r.pm||'';
+  _dpRecord._orig_constructionStart=r.constructionStart||'';
+  _dpRecord._orig_constructionEnd=r.constructionEnd||'';
+  _dpRecord._orig_constructionTeam=r.constructionTeam||'';
+  _dpRecord._orig_comments=r.comments||'';
   // Populate Status dropdown
   const stSel=document.getElementById('edit-status');
   const stVals=statusOptions.length?statusOptions.map(o=>o.Name):['Not Started','Not required','In Progress','Completed','Complete - No Work Required'];
@@ -1267,13 +1275,22 @@ function saveDpEdit(){
       damageNumber:_dpRecord.damageNumber,
       category:_dpRecord.category,
       eventNo:_dpRecord.eventNo,
+      // New values
       status:updated.status,
       priority:updated.priority,
       pm:updated.pm,
       constructionStart:updated.constructionStart,
       constructionEnd:updated.constructionEnd,
-      constructionTeam:_dpRecord.constructionTeam,
-      comments:updated.comments
+      constructionTeam:updated.constructionTeam,
+      comments:updated.comments,
+      // Original values for change detection
+      orig_status:_dpRecord._orig_status||'',
+      orig_priority:_dpRecord._orig_priority||'',
+      orig_pm:_dpRecord._orig_pm||'',
+      orig_constructionStart:_dpRecord._orig_constructionStart||'',
+      orig_constructionEnd:_dpRecord._orig_constructionEnd||'',
+      orig_constructionTeam:_dpRecord._orig_constructionTeam||'',
+      orig_comments:_dpRecord._orig_comments||''
     }
   });
   closeDpEdit();
