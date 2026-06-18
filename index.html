@@ -481,7 +481,7 @@ function normalise(raw){
     modifiedOn:        g('Modified_On','modifiedOn','modifiedon')                                      || '',
     constructionStart: g('Contractor_Start','constructionStart')                                     || '',
     constructionEnd:   g('Contractor_End','constructionEnd')                                         || '',
-    constructionTeam:  g('Construction_Team','constructionTeam')                                       || '',
+    constructionTeam:  g('Construction_Team','constructionTeam')                                     || '',
     comments:          g('Comments','comments')                                                         || '',
   };
 }
@@ -1244,6 +1244,7 @@ function saveDpEdit(){
     pm:document.getElementById('edit-pm').value,
     constructionStart:document.getElementById('edit-construction-start').value,
     constructionEnd:document.getElementById('edit-construction-end').value,
+    constructionTeam:_dpRecord.constructionTeam,
     comments:document.getElementById('edit-comments').value,
   };
   // Update local record
