@@ -367,6 +367,10 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
             <input type="date" id="edit-construction-end" class="dp-edit-input">
           </div>
           <div class="dp-edit-field">
+            <label class="dp-edit-label">Contractor Assigned</label>
+            <input type="text" id="edit-contractor-assigned" class="dp-edit-input" placeholder="Enter contractor name…">
+          </div>
+          <div class="dp-edit-field">
             <label class="dp-edit-label">Comments</label>
             <textarea id="edit-comments" class="dp-edit-textarea" rows="3" placeholder="Add comments…"></textarea>
           </div>
@@ -1226,6 +1230,7 @@ function toggleDpEdit(){
   const toDateInput=d=>{if(!d)return'';try{const dt=new Date(d);return dt.toISOString().split('T')[0];}catch(e){return'';}};
   document.getElementById('edit-construction-start').value=toDateInput(r.constructionStart);
   document.getElementById('edit-construction-end').value=toDateInput(r.constructionEnd);
+  document.getElementById('edit-contractor-assigned').value=r.constructionTeam||'';
   document.getElementById('edit-comments').value=r.comments||'';
 }
 function closeDpEdit(){
@@ -1244,7 +1249,7 @@ function saveDpEdit(){
     pm:document.getElementById('edit-pm').value,
     constructionStart:document.getElementById('edit-construction-start').value,
     constructionEnd:document.getElementById('edit-construction-end').value,
-    constructionTeam:_dpRecord.constructionTeam,
+    constructionTeam:document.getElementById('edit-contractor-assigned').value,
     comments:document.getElementById('edit-comments').value,
   };
   // Update local record
@@ -1253,6 +1258,7 @@ function saveDpEdit(){
   _dpRecord.pm=updated.pm;
   _dpRecord.constructionStart=updated.constructionStart;
   _dpRecord.constructionEnd=updated.constructionEnd;
+  _dpRecord.constructionTeam=updated.constructionTeam;
   _dpRecord.comments=updated.comments;
   postUp({
     type:'TASK_UPDATED',
