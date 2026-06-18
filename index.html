@@ -1254,8 +1254,22 @@ function saveDpEdit(){
   _dpRecord.constructionStart=updated.constructionStart;
   _dpRecord.constructionEnd=updated.constructionEnd;
   _dpRecord.comments=updated.comments;
-  // Send to Power Apps
-  postUp(updated);
+  postUp({
+    type:'TASK_UPDATED',
+    task:{
+      guid:_dpRecord.parentID,
+      damageNumber:_dpRecord.damageNumber,
+      category:_dpRecord.category,
+      eventNo:_dpRecord.eventNo,
+      status:updated.status,
+      priority:updated.priority,
+      pm:updated.pm,
+      constructionStart:updated.constructionStart,
+      constructionEnd:updated.constructionEnd,
+      constructionTeam:_dpRecord.constructionTeam,
+      comments:updated.comments
+    }
+  });
   closeDpEdit();
   // Refresh panel
   renderDpTab();
@@ -1317,7 +1331,15 @@ function togglePane(){
 })();
 
 /* ── postMessage → Power Apps ── */
-function postUp(obj){try{window.parent.postMessage(JSON.stringify(obj),'*');}catch(e){}}
+function postUp(obj){
+  try{
+    const msg=JSON.stringify(obj);
+    // Method 1: postMessage to parent
+    window.parent.postMessage(msg,'*');
+    // Method 2: store in sessionStorage for PCF to read
+    try{sessionStorage.setItem('drfa_map_message',msg);}catch(e){}
+  }catch(e){}
+}}
 
 /* ── RELOAD DATA ── called whenever hash changes ── */
 function reloadData(){
