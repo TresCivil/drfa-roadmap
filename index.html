@@ -1397,6 +1397,27 @@ document.getElementById('filterStatus').addEventListener('change',function(){fil
 // Reload when Power Apps updates the iframe src
 window.addEventListener('hashchange', reloadData);
 
+// Listen for messages from Power Apps (e.g. refreshed activity trail)
+window.addEventListener('message', function(e){
+  try{
+    const msg=typeof e.data==='string'?JSON.parse(e.data):e.data;
+    if(!msg||!msg.type)return;
+    if(msg.type==='REFRESH_TRAIL'&&Array.isArray(msg.activityTrail)){
+      activityTrail=msg.activityTrail;
+      // If detail panel is open on history tab, refresh it
+      if(_dpRecord&&_dpTab==='history') renderDpTab();
+    }
+    if(msg.type==='REFRESH_DATA'&&Array.isArray(msg.records)){
+      const _all=msg.records.map(normalise);
+      records=_all.filter(r=>!(r.lat===0&&r.lng===0)&&!isNaN(r.lat)&&r.lat!==null);
+      allRecords=_all;
+      if(Array.isArray(msg.activityTrail)) activityTrail=msg.activityTrail;
+      renderList(); updatePins();
+      if(_dpRecord&&_dpTab==='history') renderDpTab();
+    }
+  }catch(e){}
+});
+
 /* ── BOOT ── */
 if(!loadFromHash()){
   const _all=DEMO.map(normalise);
