@@ -1160,16 +1160,12 @@ function showFloatPopup(r){
   document.querySelectorAll('.dp-tab')[0].classList.add('active');
   renderDpTab();
   document.getElementById('detailPanel').classList.add('open');
-  // Re-fit map bounds now that the panel covers part of the view
-  setTimeout(fitAll,320);
 }
 function closeFloatPopup(){
   document.getElementById('detailPanel').classList.remove('open');
   document.querySelectorAll('.list-card').forEach(el=>el.classList.remove('active'));
   highlightPin(null);
   _dpRecord=null;
-  // Re-fit map bounds now that the panel is closed
-  setTimeout(fitAll,320);
 }
 function switchDpTab(tab,btn){
   _dpTab=tab;
