@@ -38,9 +38,9 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
 
 /* ── STATS BAR ── */
 #statsBar{display:flex;align-items:stretch;background:#fff;border-bottom:1px solid var(--rim2);gap:0;padding:8px 75px 8px 16px;justify-content:flex-end;}
-.stat-cell{flex:0 0 auto;padding:0 90px 0 0;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:3px;position:relative;}
+.stat-cell{flex:0 0 auto;padding:0 100px 0 0;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:3px;position:relative;}
 .stat-cell:last-child{padding-right:0;}
-.stat-cell:not(:last-child)::after{content:'';position:absolute;right:45px;top:50%;transform:translateY(-50%);width:1px;height:24px;background:var(--rim2);}
+.stat-cell:not(:last-child)::after{content:'';position:absolute;right:50px;top:50%;transform:translateY(-50%);width:1px;height:24px;background:var(--rim2);}
 .stat-label{font-size:9px;font-weight:600;color:#686C75;display:flex;align-items:center;gap:5px;white-space:nowrap;}
 .stat-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
 .stat-value{font-size:18px;font-weight:700;color:#111827;}
@@ -52,7 +52,7 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
 #filterbar-filters::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:2px;}
 .fb-group{display:flex;flex-direction:column;gap:2px;flex-shrink:0;}
 .fb-group-label{font-size:8px;font-weight:600;color:#686C75;white-space:nowrap;letter-spacing:.01em;}
-.fb-select{height:30px;padding:0 22px 0 8px;font-family:'Segoe UI',sans-serif;font-size:8px;font-weight:400;color:#111827;border:1.5px solid #e5e7eb;border-radius:6px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239ca3af'/%3E%3C/svg%3E") no-repeat right 8px center;-webkit-appearance:none;appearance:none;color:#1a1a2e;outline:none;cursor:pointer;transition:border-color .15s;min-width:85px;max-width:150px;}
+.fb-select{height:30px;padding:0 22px 0 8px;font-family:'Segoe UI',sans-serif;font-size:8px;font-weight:400;color:#111827;border:1.5px solid #e5e7eb;border-radius:6px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239ca3af'/%3E%3C/svg%3E") no-repeat right 8px center;-webkit-appearance:none;appearance:none;color:#1a1a2e;outline:none;cursor:pointer;transition:border-color .15s;min-width:90px;max-width:155px;}
 .fb-select:focus{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.1);}
 .fb-select:disabled{opacity:.45;cursor:not-allowed;}
 .fb-select option{background:#fff;}
@@ -111,6 +111,12 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
 /* ── MAP ── */
 #mapArea{flex:1;position:relative;overflow:hidden}
 #azureMap{position:absolute;top:0;left:0;right:0;bottom:0}
+
+/* Map style toggle */
+#mapStyleToggle{position:absolute;top:14px;left:14px;z-index:10;display:flex;background:#fff;border-radius:12px;padding:4px;box-shadow:0 4px 16px rgba(0,0,0,0.18);gap:2px;}
+.map-style-btn{border:none;background:transparent;padding:8px 18px;font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:600;color:#6b7280;border-radius:9px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.map-style-btn:hover:not(.active){color:#1a1a2e;}
+.map-style-btn.active{background:#F0F1F3;color:#111827;}
 
 /* Pane toggle */
 #paneToggle{position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:50;width:18px;height:56px;background:#fff;border:1px solid var(--rim2);border-left:none;border-radius:0 8px 8px 0;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:12px;font-weight:700;box-shadow:2px 0 8px rgba(0,0,0,.14);transition:background .15s,color .15s;padding:0}
@@ -340,6 +346,10 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
     <div id="mapLoader">
       <div class="loader-text">Loading map…</div>
       <div class="loader-bar-track"><div class="loader-bar-fill"></div></div>
+    </div>
+    <div id="mapStyleToggle">
+      <button class="map-style-btn" id="btnStyleMap" onclick="setMapStyle('road')">Map</button>
+      <button class="map-style-btn active" id="btnStyleSat" onclick="setMapStyle('satellite')">Satellite</button>
     </div>
     <button onclick="fitAll()" title="Fit all pins" style="position:absolute;bottom:40px;right:14px;z-index:10;width:32px;height:32px;background:#fff;border:1px solid rgba(0,0,0,0.14);border-radius:6px;font-size:16px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;">⊡</button>
   </div>
@@ -1031,6 +1041,15 @@ function hideLoader(){
   if(!el)return;
   el.classList.add('hidden');
   setTimeout(()=>el.classList.add('gone'),520);
+}
+
+/* ── MAP STYLE TOGGLE ── */
+function setMapStyle(mode){
+  if(!azMap)return;
+  const style = mode==='satellite' ? 'satellite_road_labels' : 'road';
+  azMap.setStyle({style});
+  document.getElementById('btnStyleMap').classList.toggle('active', mode==='road');
+  document.getElementById('btnStyleSat').classList.toggle('active', mode==='satellite');
 }
 
 /* ── AZURE MAP INIT — lightweight road style ── */
