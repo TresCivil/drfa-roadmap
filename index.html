@@ -19,93 +19,6 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
   --status-neutral:#4B5563;--status-neutral-bg:rgba(75,85,99,0.08);
   --radius:6px;--radius-lg:12px;--radius-xl:18px;
 }
-body.dark-mode{
-  --surface:#15171c;--surface2:#1c1f26;--surface3:#262a33;
-  --rim:rgba(255,255,255,0.08);--rim2:rgba(255,255,255,0.14);
-  --text:#e8eaed;--muted:#9aa0aa;--faint:#6b7280;
-  --status-neutral:#9aa0aa;--status-neutral-bg:rgba(154,160,170,0.14);
-}
-body.dark-mode{background:var(--surface);color:var(--text);}
-
-/* Page chrome */
-body.dark-mode #app,
-body.dark-mode #filterbar,
-body.dark-mode #statsBar,
-body.dark-mode #side,
-body.dark-mode #mapArea{
-  background-color:var(--surface);
-}
-body.dark-mode #statsBar,
-body.dark-mode #filterbar{ border-color:var(--rim2); }
-
-/* KPI cards */
-body.dark-mode .stat-label{ color:var(--muted); }
-body.dark-mode .stat-value{ color:var(--text); }
-body.dark-mode .stat-cell:not(:last-child)::after{ background:var(--rim2); }
-
-/* Filter inputs */
-body.dark-mode .fb-group-label{ color:var(--muted); }
-body.dark-mode .fb-select{ color:var(--text); background-color:var(--surface2); border-color:var(--rim2); }
-body.dark-mode #sideSearch{ background-color:var(--surface2); border-color:var(--rim2); }
-body.dark-mode #sideSearchInput{ color:var(--text); }
-body.dark-mode #sideSearchInput::placeholder{ color:var(--faint); }
-body.dark-mode .conn-badge{ color:var(--muted); }
-
-/* Side panel header */
-body.dark-mode #sideHeader{ background-color:var(--surface); border-color:var(--rim); }
-body.dark-mode #sideHeader .sh-count{ color:var(--text); background:transparent; }
-body.dark-mode #sideHeader .sh-sort{ color:var(--muted); }
-
-/* Road group headers */
-body.dark-mode .group-header{ background-color:transparent; }
-body.dark-mode .group-name{ color:var(--text); }
-body.dark-mode .group-count{ background:var(--surface3); color:var(--text); }
-body.dark-mode .group-chevron{ color:var(--muted); }
-body.dark-mode .card-dmgno{ color:var(--text); }
-body.dark-mode .card-details{ color:var(--text); }
-body.dark-mode .card-pm{ color:var(--muted); }
-body.dark-mode .card-modified{ color:var(--muted); }
-body.dark-mode .card-priority-text{ color:var(--muted); }
-body.dark-mode .sort-field-name{ color:var(--text); }
-body.dark-mode .sort-arrow{ color:var(--text); }
-
-/* Record cards */
-body.dark-mode .list-card{ background-color:var(--surface2); border-color:var(--rim2); }
-body.dark-mode .list-card:hover{ border-color:var(--rim2); box-shadow:0 2px 8px rgba(0,0,0,.4); }
-body.dark-mode .card-arrow{ color:var(--muted); background:transparent; }
-body.dark-mode #sideList{ background-color:var(--surface); }
-
-/* Right detail panel */
-body.dark-mode #detailPanel{ background-color:var(--surface); border-color:var(--rim2); }
-body.dark-mode #dp-header{ border-color:var(--rim); }
-body.dark-mode #dp-ref{ color:var(--text); background:transparent; }
-body.dark-mode #dp-close{ color:var(--muted); background:rgba(255,255,255,.06); }
-body.dark-mode .dp-tabs{ border-color:var(--rim); }
-body.dark-mode .dp-tab{ color:var(--muted); }
-body.dark-mode .dp-tab.active{ color:var(--text); }
-body.dark-mode .dp-row{ border-color:var(--rim); }
-body.dark-mode .dp-label{ color:var(--faint); }
-body.dark-mode .dp-value{ color:var(--text); background:transparent; }
-body.dark-mode .dp-chevron{ color:var(--muted); }
-body.dark-mode #dp-footer{ border-color:var(--rim); }
-
-/* Map overlay controls */
-body.dark-mode #mapStyleToggle{ background:var(--surface2); }
-body.dark-mode .map-style-btn{ color:var(--muted); }
-body.dark-mode .map-style-btn.active{ background:var(--surface3); color:var(--text); }
-body.dark-mode #zoomControls{ background:var(--surface2); border-color:var(--rim2); }
-body.dark-mode #zoomControls button{ background:var(--surface2); color:var(--text); }
-body.dark-mode #zoomControls button:first-child{ border-color:var(--rim); }
-body.dark-mode #zoomControls button:hover{ background:var(--surface3); }
-
-/* Edit panel */
-body.dark-mode #dp-edit-panel{ background-color:var(--surface); }
-body.dark-mode #paneToggle{ background:var(--surface2); color:var(--muted); border-color:var(--rim2); }
-body.dark-mode .dp-edit-label{ color:var(--muted); }
-body.dark-mode .dp-edit-select,
-body.dark-mode .dp-edit-input,
-body.dark-mode .dp-edit-textarea{ background-color:var(--surface2); color:var(--text); border-color:var(--rim2); }
-
 #app{display:grid;grid-template-rows:auto auto 1fr;height:100vh;min-height:0}
 
 .conn-badge{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
@@ -276,6 +189,95 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
 .loader-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#6366F1,#8B5CF6,#6366F1);background-size:200% 100%;animation:loaderSlide 1.2s linear infinite;}
 @keyframes loaderSlide{0%{background-position:100% 0}100%{background-position:-100% 0}}
 .loader-text{font-size:11px;font-weight:600;color:#6b7280;letter-spacing:.04em;}
+
+/* ============ DARK MODE (placed last for cascade priority) ============ */
+body.dark-mode{
+  --surface:#15171c;--surface2:#1c1f26;--surface3:#262a33;
+  --rim:rgba(255,255,255,0.08);--rim2:rgba(255,255,255,0.14);
+  --text:#e8eaed;--muted:#9aa0aa;--faint:#6b7280;
+  --status-neutral:#9aa0aa;--status-neutral-bg:rgba(154,160,170,0.14);
+}
+body.dark-mode{background:var(--surface);color:var(--text);}
+
+/* Page chrome */
+body.dark-mode #app,
+body.dark-mode #filterbar,
+body.dark-mode #statsBar,
+body.dark-mode #side,
+body.dark-mode #mapArea{
+  background-color:var(--surface);
+}
+body.dark-mode #statsBar,
+body.dark-mode #filterbar{ border-color:var(--rim2); }
+
+/* KPI cards */
+body.dark-mode .stat-label{ color:var(--muted); }
+body.dark-mode .stat-value{ color:var(--text); }
+body.dark-mode .stat-cell:not(:last-child)::after{ background:var(--rim2); }
+
+/* Filter inputs */
+body.dark-mode .fb-group-label{ color:var(--muted); }
+body.dark-mode .fb-select{ color:var(--text); background-color:var(--surface2); border-color:var(--rim2); }
+body.dark-mode #sideSearch{ background-color:var(--surface2); border-color:var(--rim2); }
+body.dark-mode #sideSearchInput{ color:var(--text) !important; }
+body.dark-mode #sideSearchInput::placeholder{ color:var(--faint) !important; }
+body.dark-mode .conn-badge{ color:var(--muted); }
+
+/* Side panel header */
+body.dark-mode #sideHeader{ background-color:var(--surface); border-color:var(--rim); }
+body.dark-mode #sideHeader .sh-count{ color:var(--text); background:transparent; }
+body.dark-mode #sideHeader .sh-sort{ color:var(--muted); }
+
+/* Road group headers */
+body.dark-mode .group-header{ background-color:transparent; }
+body.dark-mode .group-name{ color:var(--text); }
+body.dark-mode .group-count{ background:var(--surface3); color:var(--text); }
+body.dark-mode .group-chevron{ color:var(--muted); }
+body.dark-mode .card-dmgno{ color:var(--text); }
+body.dark-mode .card-details{ color:var(--text); }
+body.dark-mode .card-pm{ color:var(--muted); }
+body.dark-mode .card-modified{ color:var(--muted); }
+body.dark-mode .card-priority-text{ color:var(--muted); }
+body.dark-mode .sort-field-name{ color:var(--text); }
+body.dark-mode .sort-arrow{ color:var(--text); }
+
+/* Record cards */
+body.dark-mode .list-card{ background-color:var(--surface2); border-color:var(--rim2); }
+body.dark-mode .list-card:hover{ border-color:var(--rim2); box-shadow:0 2px 8px rgba(0,0,0,.4); }
+body.dark-mode .card-arrow{ color:var(--muted); background:transparent; }
+body.dark-mode #sideList{ background-color:var(--surface); }
+
+/* Right detail panel */
+body.dark-mode #detailPanel{ background-color:var(--surface); border-color:var(--rim2); }
+body.dark-mode #dp-header{ border-color:var(--rim); }
+body.dark-mode #dp-ref{ color:var(--text); background:transparent; }
+body.dark-mode #dp-close{ color:var(--muted); background:rgba(255,255,255,.06); }
+body.dark-mode .dp-tabs{ border-color:var(--rim); }
+body.dark-mode .dp-tab{ color:var(--muted); }
+body.dark-mode .dp-tab.active{ color:var(--text); }
+body.dark-mode .dp-row{ border-color:var(--rim); }
+body.dark-mode .dp-label{ color:var(--faint); }
+body.dark-mode .dp-value{ color:var(--text); background:transparent; }
+body.dark-mode .dp-chevron{ color:var(--muted); }
+body.dark-mode #dp-footer{ border-color:var(--rim); }
+
+/* Map overlay controls */
+body.dark-mode #mapStyleToggle{ background:var(--surface2); }
+body.dark-mode .map-style-btn{ color:var(--muted); }
+body.dark-mode .map-style-btn.active{ background:var(--surface3); color:var(--text); }
+body.dark-mode #zoomControls{ background:var(--surface2); border-color:var(--rim2); }
+body.dark-mode #zoomControls button{ background:var(--surface2); color:var(--text); }
+body.dark-mode #zoomControls button:first-child{ border-color:var(--rim); }
+body.dark-mode #zoomControls button:hover{ background:var(--surface3); }
+
+/* Edit panel */
+body.dark-mode #dp-edit-panel{ background-color:var(--surface); }
+body.dark-mode #paneToggle{ background:var(--surface2); color:var(--muted); border-color:var(--rim2); }
+body.dark-mode .dp-edit-label{ color:var(--muted); }
+body.dark-mode .dp-edit-select,
+body.dark-mode .dp-edit-input,
+body.dark-mode .dp-edit-textarea{ background-color:var(--surface2); color:var(--text); border-color:var(--rim2); }
+
 </style>
 </head>
 <body>
@@ -288,15 +290,15 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
     <div class="stat-value" id="statTotal">0</div>
   </div>
   <div class="stat-cell">
-    <div class="stat-label"><span class="stat-dot" style="background:#2563EB;"></span>EW</div>
+    <div class="stat-label" style="color:#2563EB;"><span class="stat-dot" style="background:#2563EB;"></span>EW</div>
     <div class="stat-value" id="statEW">0</div>
   </div>
   <div class="stat-cell">
-    <div class="stat-label"><span class="stat-dot" style="background:#14B8A6;"></span>IRW</div>
+    <div class="stat-label" style="color:#14B8A6;"><span class="stat-dot" style="background:#14B8A6;"></span>IRW</div>
     <div class="stat-value" id="statIRW">0</div>
   </div>
   <div class="stat-cell">
-    <div class="stat-label"><span class="stat-dot" style="background:#5B03FF;"></span>EPAR</div>
+    <div class="stat-label" style="color:#5B03FF;"><span class="stat-dot" style="background:#5B03FF;"></span>EPAR</div>
     <div class="stat-value" id="statEPAR">0</div>
   </div>
   <div class="stat-cell">
