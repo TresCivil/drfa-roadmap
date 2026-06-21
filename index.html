@@ -16,48 +16,88 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
   --rim:rgba(0,0,0,0.07);--rim2:rgba(0,0,0,0.12);
   --text:#1a1a2e;--muted:#6b7280;--faint:#9ca3af;
   --ew:#3B82F6;--irw:#10B981;--epar:#F59E0B;--rw:#F97316;
+  --status-neutral:#4B5563;--status-neutral-bg:rgba(75,85,99,0.08);
   --radius:6px;--radius-lg:12px;--radius-xl:18px;
 }
 body.dark-mode{
   --surface:#15171c;--surface2:#1c1f26;--surface3:#262a33;
   --rim:rgba(255,255,255,0.08);--rim2:rgba(255,255,255,0.14);
   --text:#e8eaed;--muted:#9aa0aa;--faint:#6b7280;
+  --status-neutral:#9aa0aa;--status-neutral-bg:rgba(154,160,170,0.14);
 }
 body.dark-mode{background:var(--surface);color:var(--text);}
+
+/* Page chrome */
 body.dark-mode #app,
 body.dark-mode #filterbar,
 body.dark-mode #statsBar,
 body.dark-mode #side,
-body.dark-mode #mapArea,
-body.dark-mode .list-card,
-body.dark-mode #detailPanel,
-body.dark-mode .fb-select,
-body.dark-mode #sideSearch,
-body.dark-mode .group-name,
-body.dark-mode .dp-value,
-body.dark-mode #dp-ref,
-body.dark-mode .card-arrow,
-body.dark-mode .fb-group-label,
-body.dark-mode #sideHeader .sh-count{
-  background-color:var(--surface);color:var(--text);
+body.dark-mode #mapArea{
+  background-color:var(--surface);
 }
 body.dark-mode #statsBar,
-body.dark-mode #filterbar,
-body.dark-mode #side,
-body.dark-mode .list-card,
-body.dark-mode .fb-select,
-body.dark-mode #sideSearch{
-  border-color:var(--rim2);
-}
-body.dark-mode .group-name{color:var(--text);}
-body.dark-mode .fb-select{color:var(--text);background-color:var(--surface);}
-body.dark-mode #sideSearchInput{color:var(--text);}
-body.dark-mode #mapStyleToggle{background:var(--surface2);}
-body.dark-mode .map-style-btn{color:var(--muted);}
-body.dark-mode .map-style-btn.active{background:var(--surface3);color:var(--text);}
-body.dark-mode #zoomControls,body.dark-mode #zoomControls button{background:var(--surface2);color:var(--text);}
-body.dark-mode #detailPanel{background:var(--surface);}
-body.dark-mode .dp-row{border-color:var(--rim);}
+body.dark-mode #filterbar{ border-color:var(--rim2); }
+
+/* KPI cards */
+body.dark-mode .stat-label{ color:var(--muted); }
+body.dark-mode .stat-value{ color:var(--text); }
+body.dark-mode .stat-cell:not(:last-child)::after{ background:var(--rim2); }
+
+/* Filter inputs */
+body.dark-mode .fb-group-label{ color:var(--muted); }
+body.dark-mode .fb-select{ color:var(--text); background-color:var(--surface2); border-color:var(--rim2); }
+body.dark-mode #sideSearch{ background-color:var(--surface2); border-color:var(--rim2); }
+body.dark-mode #sideSearchInput{ color:var(--text); }
+body.dark-mode #sideSearchInput::placeholder{ color:var(--faint); }
+body.dark-mode .conn-badge{ color:var(--muted); }
+
+/* Side panel header */
+body.dark-mode #sideHeader{ background-color:var(--surface); border-color:var(--rim); }
+body.dark-mode #sideHeader .sh-count{ color:var(--text); background:transparent; }
+body.dark-mode #sideHeader .sh-sort{ color:var(--muted); }
+
+/* Road group headers */
+body.dark-mode .group-header{ background-color:transparent; }
+body.dark-mode .group-name{ color:var(--text); }
+body.dark-mode .group-count{ background:var(--surface3); color:var(--text); }
+body.dark-mode .group-chevron{ color:var(--muted); }
+
+/* Record cards */
+body.dark-mode .list-card{ background-color:var(--surface2); border-color:var(--rim2); }
+body.dark-mode .list-card:hover{ border-color:var(--rim2); box-shadow:0 2px 8px rgba(0,0,0,.4); }
+body.dark-mode .card-arrow{ color:var(--muted); background:transparent; }
+body.dark-mode #sideList{ background-color:var(--surface); }
+
+/* Right detail panel */
+body.dark-mode #detailPanel{ background-color:var(--surface); border-color:var(--rim2); }
+body.dark-mode #dp-header{ border-color:var(--rim); }
+body.dark-mode #dp-ref{ color:var(--text); background:transparent; }
+body.dark-mode #dp-close{ color:var(--muted); background:rgba(255,255,255,.06); }
+body.dark-mode .dp-tabs{ border-color:var(--rim); }
+body.dark-mode .dp-tab{ color:var(--muted); }
+body.dark-mode .dp-tab.active{ color:var(--text); }
+body.dark-mode .dp-row{ border-color:var(--rim); }
+body.dark-mode .dp-label{ color:var(--faint); }
+body.dark-mode .dp-value{ color:var(--text); background:transparent; }
+body.dark-mode .dp-chevron{ color:var(--muted); }
+body.dark-mode #dp-footer{ border-color:var(--rim); }
+
+/* Map overlay controls */
+body.dark-mode #mapStyleToggle{ background:var(--surface2); }
+body.dark-mode .map-style-btn{ color:var(--muted); }
+body.dark-mode .map-style-btn.active{ background:var(--surface3); color:var(--text); }
+body.dark-mode #zoomControls{ background:var(--surface2); border-color:var(--rim2); }
+body.dark-mode #zoomControls button{ background:var(--surface2); color:var(--text); }
+body.dark-mode #zoomControls button:first-child{ border-color:var(--rim); }
+body.dark-mode #zoomControls button:hover{ background:var(--surface3); }
+
+/* Edit panel */
+body.dark-mode #dp-edit-panel{ background-color:var(--surface); }
+body.dark-mode .dp-edit-label{ color:var(--muted); }
+body.dark-mode .dp-edit-select,
+body.dark-mode .dp-edit-input,
+body.dark-mode .dp-edit-textarea{ background-color:var(--surface2); color:var(--text); border-color:var(--rim2); }
+
 #app{display:grid;grid-template-rows:auto auto 1fr;height:100vh;min-height:0}
 
 .conn-badge{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
@@ -820,9 +860,9 @@ function updateHasDamageBtn(){
 /* ── STATUS / PRIORITY CONFIG ── */
 const STATUS_CFG={
   'In Progress':              {bg:'rgba(222,140,0,0.08)',  color:'#DE8C00', label:'IN PROGRESS'},
-  'Not Started':              {bg:'rgba(75,85,99,0.08)',   color:'#4B5563', label:'NOT STARTED'},
-  'Not required':             {bg:'rgba(75,85,99,0.08)',   color:'#4B5563', label:'NOT REQUIRED'},
-  'Not Required':             {bg:'rgba(75,85,99,0.08)',   color:'#4B5563', label:'NOT REQUIRED'},
+  'Not Started':              {bg:'var(--status-neutral-bg)',   color:'var(--status-neutral)', label:'NOT STARTED'},
+  'Not required':             {bg:'var(--status-neutral-bg)',   color:'var(--status-neutral)', label:'NOT REQUIRED'},
+  'Not Required':             {bg:'var(--status-neutral-bg)',   color:'var(--status-neutral)', label:'NOT REQUIRED'},
   'Completed':                {bg:'rgba(20,184,166,0.08)', color:'#14B8A6', label:'COMPLETED'},
   'Complete - No Work Required':{bg:'rgba(59,130,246,0.08)',color:'#3B82F6',label:'COMPLETE - NO WORK REQUIRED'},
 };
