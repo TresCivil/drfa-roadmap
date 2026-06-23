@@ -1298,11 +1298,17 @@ function showFloatPopup(r){
   badge.textContent=sc.label; badge.style.background=sc.bg; badge.style.color=sc.color;
   document.getElementById('dp-header').style.borderTop=`3px solid ${col}`;
   // Update attachments tab count badge
-  const prepPath=`Shared Documents/IRW/ATP/Preparation/${r.atpNumber} - ${r.damageNumber}/`;
-  const subPath=`Shared Documents/IRW/ATP/Submission/${r.atpNumber} - ${r.damageNumber}/`;
+  const _atp=r.atpNumber||'';
+  const _dmg=r.damageNumber||'';
+  const _paths=[
+    `Shared Documents/IRW/ATP/Preparation/${_atp} - ${_dmg}/`,
+    `Shared Documents/IRW/ATP/Submission/${_atp} - ${_dmg}/`,
+    `Shared Documents/IRW/ATP/Preparation/${_dmg}/`,
+    `Shared Documents/IRW/ATP/Submission/${_dmg}/`,
+  ].filter(p=>!p.startsWith('Shared Documents/IRW/ATP/Preparation/ - '));
   const docCount=documentsData.filter(d=>{
     const p=d['{Path}']||d.Path||'';
-    return p===prepPath||p===subPath;
+    return _paths.some(pp=>p===pp||p.startsWith(pp));
   }).length;
   const attTab=document.getElementById('dp-tab-attachments');
   if(attTab) attTab.textContent=docCount?`Attachments (${docCount})`:'Attachments';
@@ -1408,16 +1414,25 @@ function renderDpTab(){
     break;}
     case 'attachments':{
     const r=_dpRecord;
-    // Match documents from both Preparation and Submission folders
-    // Path pattern: Shared Documents/IRW/ATP/{subfolder}/{ATP Number} - {Damage Number}/
-    const prepPath=`Shared Documents/IRW/ATP/Preparation/${r.atpNumber} - ${r.damageNumber}/`;
-    const subPath=`Shared Documents/IRW/ATP/Submission/${r.atpNumber} - ${r.damageNumber}/`;
+    // Build possible paths - with ATP number and without (for records without ATP lookup)
+    const atp=r.atpNumber||'';
+    const dmg=r.damageNumber||'';
+    const possiblePaths=[
+      `Shared Documents/IRW/ATP/Preparation/${atp} - ${dmg}/`,
+      `Shared Documents/IRW/ATP/Submission/${atp} - ${dmg}/`,
+      `Shared Documents/IRW/ATP/Preparation/${dmg}/`,
+      `Shared Documents/IRW/ATP/Submission/${dmg}/`,
+    ].filter(p=>!p.startsWith('Shared Documents/IRW/ATP/Preparation/ - '));
     const docs=documentsData.filter(d=>{
       const p=d['{Path}']||d.Path||'';
-      return p===prepPath||p===subPath;
+      return possiblePaths.some(pp=>p===pp||p.startsWith(pp));
     });
     const prepDocs=docs.filter(d=>(d['{Path}']||d.Path||'').includes('/Preparation/'));
     const subDocs=docs.filter(d=>(d['{Path}']||d.Path||'').includes('/Submission/'));
+
+    // Debug info
+    const debugInfo=`ATP: "${atp}" | DMG: "${dmg}" | Docs total: ${documentsData.length} | Matched: ${docs.length}<br>Paths tried:<br>${possiblePaths.map(p=>`• ${p}`).join('<br>')}<br>Sample doc paths:<br>${documentsData.slice(0,5).map(d=>`• ${d['{Path}']||d.Path||'(no path)'}`).join('<br>')}`;
+
     const isImg=ext=>['jpg','jpeg','png','gif','webp','bmp'].includes((ext||'').toLowerCase());
     const fileIcon=(ext)=>{
       const e=(ext||'').toLowerCase();
@@ -1457,6 +1472,7 @@ function renderDpTab(){
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
           <span style="font-size:13px;font-weight:700;color:var(--text);">Attachments (${docs.length})</span>
         </div>
+        <div style="font-size:9px;color:#9ca3af;background:#f3f4f6;padding:8px;border-radius:6px;margin-bottom:12px;line-height:1.6;">${debugInfo}</div>
         ${docs.length===0?`<div style="text-align:center;padding:24px 0;color:#9ca3af;font-size:12px;">No attachments found</div>`:''}
         ${prepDocs.length?`
           <div style="font-size:11px;font-weight:700;color:#6b7280;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em;">Preparation (${prepDocs.length})</div>
