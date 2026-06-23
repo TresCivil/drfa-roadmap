@@ -656,6 +656,7 @@ let EVENT_KEYS=['EN0001','EN0002'];
 let statusOptions=[];
 let priorityOptions=[];
 let pmOptions=[];
+let agrnOptions=[];
 let activityTrail=[];
 let documentsData=[];
 
@@ -680,6 +681,7 @@ function loadFromHash(){
       priorityOptions=(p.priorityOptions||[]).sort((a,b)=>(a.SortOrder||0)-(b.SortOrder||0));
       pmOptions=(p.pmOptions||[]).sort((a,b)=>(a.SortOrder||0)-(b.SortOrder||0));
       activityTrail=p.activityTrail||[];
+      agrnOptions=(p.agrnOptions||[]).map(o=>o.Name).filter(Boolean);
       documentsData=p.documents||[];
       currentUser=p.currentUser||'';
       applyTheme(p.theme);
@@ -692,8 +694,13 @@ function loadFromHash(){
     const _all=rawRecords.map(normalise);
     records=_all.filter(r=>!(r.lat===0&&r.lng===0)&&!isNaN(r.lat)&&!isNaN(r.lng)&&r.lat!==null&&r.lng!==null);
     allRecords=_all; // keep full set for no-GPS count
-    const evKeys=[...new Set(records.map(r=>r.eventNo).filter(Boolean))].sort();
-    if(evKeys.length) EVENT_KEYS.splice(0,EVENT_KEYS.length,...evKeys);
+    // Prefer agrnOptions from Recover Events table; fall back to deriving from records
+    if(agrnOptions.length){
+      EVENT_KEYS.splice(0,EVENT_KEYS.length,...agrnOptions);
+    } else {
+      const evKeys=[...new Set(records.map(r=>r.eventNo).filter(Boolean))].sort();
+      if(evKeys.length) EVENT_KEYS.splice(0,EVENT_KEYS.length,...evKeys);
+    }
     activeEvent=EVENT_KEYS[EVENT_KEYS.length-1]||'';
     document.getElementById('connLabel').textContent='Dataverse';
     return true;
