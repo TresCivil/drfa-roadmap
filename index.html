@@ -331,9 +331,9 @@ body.dark-mode .dp-edit-textarea{ background-color:var(--surface2); color:var(--
 
     <div class="fb-sep"></div>
 
-    <!-- Event No. -->
+    <!-- AGRN -->
     <div class="fb-group">
-      <div class="fb-group-label">Event No.</div>
+      <div class="fb-group-label">AGRN</div>
       <select class="fb-select" id="eventTabs" onchange="setEvent(this.value)"></select>
     </div>
 
@@ -589,7 +589,7 @@ function normalise(raw){
   }
   const dmgNo = g('Recover_Damange_Number','cr8fb_Recover_Damange_Number','damageNumber') || '';
   return {
-    eventNo:      g('Event_No','AGRN_No.','cr8fb_AGRN_No','eventNo')                             || '',
+    eventNo:      g('AGRN_Number','Event_No','AGRN_No.','cr8fb_AGRNNumber','cr8fb_AGRN_No','eventNo') || '',
     category:     (()=>{
       const raw=(g('Category','Work_Register_Name','cr8fb_Work_Register_Name','category')||'').trim();
       if(!raw) return '';
