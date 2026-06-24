@@ -793,6 +793,8 @@ function setStage(key){
   document.getElementById('filterStatus').value='';
   populateStatusDropdown();
   renderStats(); renderList(); updatePins();
+  // Refresh detail panel if open so Stage row updates
+  if(_dpRecord && _dpTab==='details') renderDpTab();
 }
 function populateStatusDropdown(){
   const stS=document.getElementById('filterStatus');
@@ -1300,17 +1302,13 @@ function showFloatPopup(r){
   badge.textContent=sc.label; badge.style.background=sc.bg; badge.style.color=sc.color;
   document.getElementById('dp-header').style.borderTop=`3px solid ${col}`;
   // Update attachments tab count badge
-  const _atp=r.atpNumber||'';
   const _dmg=r.damageNumber||'';
-  const _paths=[
-    `Shared Documents/IRW/ATP/Preparation/${_atp} - ${_dmg}/`,
-    `Shared Documents/IRW/ATP/Submission/${_atp} - ${_dmg}/`,
-    `Shared Documents/IRW/ATP/Preparation/${_dmg}/`,
-    `Shared Documents/IRW/ATP/Submission/${_dmg}/`,
-  ].filter(p=>!p.startsWith('Shared Documents/IRW/ATP/Preparation/ - '));
   const docCount=documentsData.filter(d=>{
     const p=d.FullPath||d['{FullPath}']||d['{Path}']||d.Path||'';
-    return _paths.some(pp=>p===pp||p.startsWith(pp));
+    return (
+      p.startsWith('Shared Documents/IRW/ATP/Preparation/') ||
+      p.startsWith('Shared Documents/IRW/ATP/Submission/')
+    ) && p.includes(_dmg);
   }).length;
   const attTab=document.getElementById('dp-tab-attachments');
   if(attTab) attTab.textContent=docCount?`Attachments (${docCount})`:'Attachments';
@@ -1349,7 +1347,12 @@ function renderDpTab(){
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12M2 8h12M2 12h8"/></svg>`,
        label:'Damage Details', val:r.location||'—'},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12v8H2zM2 4l4 4 2-2 4 4"/></svg>`,
-       label:'Stage', val:activeStage?((r[activeStage]||'—')+' ('+((STAGES.find(s=>s.key===activeStage)||{}).label||activeStage)+')') :'— (select a stage)'},
+       label:'Stage', val:(()=>{
+         if(!activeStage) return '— (select a stage)';
+         const stageLabel=(STAGES.find(s=>s.key===activeStage)||{}).label||activeStage;
+         const stageVal=r[activeStage]||'—';
+         return `${stageVal} (${stageLabel})`;
+       })()},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>`,
        label:'Status', val:r.status||'—', isStatus:true},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2"/></svg>`,
@@ -1418,24 +1421,19 @@ function renderDpTab(){
     break;}
     case 'attachments':{
     const r=_dpRecord;
-    // Build possible paths - with ATP number and without (for records without ATP lookup)
-    const atp=r.atpNumber||'';
     const dmg=r.damageNumber||'';
-    const possiblePaths=[
-      `Shared Documents/IRW/ATP/Preparation/${atp} - ${dmg}/`,
-      `Shared Documents/IRW/ATP/Submission/${atp} - ${dmg}/`,
-      `Shared Documents/IRW/ATP/Preparation/${dmg}/`,
-      `Shared Documents/IRW/ATP/Submission/${dmg}/`,
-    ].filter(p=>!p.startsWith('Shared Documents/IRW/ATP/Preparation/ - '));
     const docs=documentsData.filter(d=>{
       const p=d.FullPath||d['{FullPath}']||d['{Path}']||d.Path||'';
-      return possiblePaths.some(pp=>p===pp||p.startsWith(pp));
+      return (
+        p.startsWith('Shared Documents/IRW/ATP/Preparation/') ||
+        p.startsWith('Shared Documents/IRW/ATP/Submission/')
+      ) && p.includes(dmg);
     });
     const prepDocs=docs.filter(d=>(d.FullPath||d['{FullPath}']||d['{Path}']||d.Path||'').includes('/Preparation/'));
     const subDocs=docs.filter(d=>(d.FullPath||d['{FullPath}']||d['{Path}']||d.Path||'').includes('/Submission/'));
 
     // Debug info
-    const debugInfo=`ATP: "${atp}" | DMG: "${dmg}" | Docs total: ${documentsData.length} | Matched: ${docs.length}<br>Paths tried:<br>${possiblePaths.map(p=>`• ${p}`).join('<br>')}<br>Sample doc paths:<br>${documentsData.slice(0,5).map(d=>`• ${d.FullPath||d['{FullPath}']||d['{Path}']||d.Path||'(no path)'}`).join('<br>')}`;
+    const debugInfo=`DMG: "${dmg}" | Docs total: ${documentsData.length} | Matched: ${docs.length}<br>Sample doc paths:<br>${documentsData.slice(0,5).map(d=>`• ${d.FullPath||d['{FullPath}']||d['{Path}']||d.Path||'(no path)'}`).join('<br>')}`;
 
     const isImg=ext=>['jpg','jpeg','png','gif','webp','bmp'].includes((ext||'').toLowerCase());
     const fileIcon=(ext)=>{
