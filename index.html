@@ -683,6 +683,8 @@ function loadFromHash(){
       activityTrail=p.activityTrail||[];
       agrnOptions=(p.agrnOptions||[]).map(o=>o.Name).filter(Boolean);
       documentsData=p.documents||[];
+      // Normalise field names — Power Apps may send FullPath or {Path}
+      documentsData=documentsData.map(d=>({...d, FullPath:d.FullPath||d['{FullPath}']||d['{Path}']||d.Path||''}));
       currentUser=p.currentUser||'';
       applyTheme(p.theme);
     } else if(Array.isArray(p)&&p.length){
@@ -1245,7 +1247,7 @@ function updatePins(){
           const el=marker.getElement();if(el){const inner=el.querySelector('.pin-inner');if(inner)inner.style.filter='';}
         });
       }
-      if(end<vis.length){requestAnimationFrame(()=>addBatch(end));}else{hideLoader(); setTimeout(fitAll,300);}
+      if(end<vis.length){requestAnimationFrame(()=>addBatch(end));}else{hideLoader();}
     }
     addBatch(0);
   }, 80);
@@ -1307,7 +1309,7 @@ function showFloatPopup(r){
     `Shared Documents/IRW/ATP/Submission/${_dmg}/`,
   ].filter(p=>!p.startsWith('Shared Documents/IRW/ATP/Preparation/ - '));
   const docCount=documentsData.filter(d=>{
-    const p=d['{Path}']||d.Path||'';
+    const p=d.FullPath||d['{FullPath}']||d['{Path}']||d.Path||'';
     return _paths.some(pp=>p===pp||p.startsWith(pp));
   }).length;
   const attTab=document.getElementById('dp-tab-attachments');
@@ -1424,14 +1426,14 @@ function renderDpTab(){
       `Shared Documents/IRW/ATP/Submission/${dmg}/`,
     ].filter(p=>!p.startsWith('Shared Documents/IRW/ATP/Preparation/ - '));
     const docs=documentsData.filter(d=>{
-      const p=d['{Path}']||d.Path||'';
+      const p=d.FullPath||d['{FullPath}']||d['{Path}']||d.Path||'';
       return possiblePaths.some(pp=>p===pp||p.startsWith(pp));
     });
-    const prepDocs=docs.filter(d=>(d['{Path}']||d.Path||'').includes('/Preparation/'));
-    const subDocs=docs.filter(d=>(d['{Path}']||d.Path||'').includes('/Submission/'));
+    const prepDocs=docs.filter(d=>(d.FullPath||d['{FullPath}']||d['{Path}']||d.Path||'').includes('/Preparation/'));
+    const subDocs=docs.filter(d=>(d.FullPath||d['{FullPath}']||d['{Path}']||d.Path||'').includes('/Submission/'));
 
     // Debug info
-    const debugInfo=`ATP: "${atp}" | DMG: "${dmg}" | Docs total: ${documentsData.length} | Matched: ${docs.length}<br>Paths tried:<br>${possiblePaths.map(p=>`• ${p}`).join('<br>')}<br>Sample doc paths:<br>${documentsData.slice(0,5).map(d=>`• ${d['{Path}']||d.Path||'(no path)'}`).join('<br>')}`;
+    const debugInfo=`ATP: "${atp}" | DMG: "${dmg}" | Docs total: ${documentsData.length} | Matched: ${docs.length}<br>Paths tried:<br>${possiblePaths.map(p=>`• ${p}`).join('<br>')}<br>Sample doc paths:<br>${documentsData.slice(0,5).map(d=>`• ${d.FullPath||d['{FullPath}']||d['{Path}']||d.Path||'(no path)'}`).join('<br>')}`;
 
     const isImg=ext=>['jpg','jpeg','png','gif','webp','bmp'].includes((ext||'').toLowerCase());
     const fileIcon=(ext)=>{
