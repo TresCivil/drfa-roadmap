@@ -888,12 +888,13 @@ function updateHasDamageBtn(){
 
 /* ── STATUS / PRIORITY CONFIG ── */
 const STATUS_CFG={
-  'In Progress':              {bg:'rgba(222,140,0,0.08)',  color:'#DE8C00', label:'IN PROGRESS'},
-  'Not Started':              {bg:'var(--status-neutral-bg)',   color:'var(--status-neutral)', label:'NOT STARTED'},
-  'Not required':             {bg:'var(--status-neutral-bg)',   color:'var(--status-neutral)', label:'NOT REQUIRED'},
-  'Not Required':             {bg:'var(--status-neutral-bg)',   color:'var(--status-neutral)', label:'NOT REQUIRED'},
-  'Completed':                {bg:'rgba(20,184,166,0.08)', color:'#14B8A6', label:'COMPLETED'},
-  'Complete - No Work Required':{bg:'rgba(59,130,246,0.08)',color:'#3B82F6',label:'COMPLETE - NO WORK REQUIRED'},
+  'In Progress':               {bg:'rgba(59,130,246,0.08)',   color:'#3B82F6', label:'IN PROGRESS'},
+  'Not Started':               {bg:'rgba(239,68,68,0.08)',    color:'#EF4444', label:'NOT STARTED'},
+  'Not required':              {bg:'rgba(245,158,11,0.08)',   color:'#DE8C00', label:'NOT REQUIRED'},
+  'Not Required':              {bg:'rgba(245,158,11,0.08)',   color:'#DE8C00', label:'NOT REQUIRED'},
+  'No Works Required':         {bg:'rgba(245,158,11,0.08)',   color:'#DE8C00', label:'NO WORKS REQUIRED'},
+  'Completed':                 {bg:'rgba(20,184,166,0.08)',   color:'#14B8A6', label:'COMPLETED'},
+  'Complete - No Work Required':{bg:'rgba(141,79,247,0.08)', color:'#8D4FF7', label:'COMPLETE - NO WORK REQUIRED'},
 };
 const PRIORITY_CFG={
   'Very High':{color:'#95150E'},
@@ -1108,7 +1109,7 @@ function popupHtml(r){
     recoverLinkHtml=`<div style="padding:0 16px 10px;">
       <a class="pop-map-btn recover" href="${recoverUrl}" target="_blank" rel="noopener" style="flex:1;background:#f0fdf4;border-color:#86efac;color:#166534;">
         <svg viewBox="0 0 14 14" fill="none" style="width:14px;height:14px;flex-shrink:0"><path d="M7 1C3.69 1 1 3.69 1 7s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z" stroke="#166534" stroke-width="1.2"/><path d="M4.5 7h5M9.5 7L7.5 5M9.5 7L7.5 9" stroke="#166534" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        View in Recover &nbsp;<span style="font-size:10px;opacity:.7;">${r.recoverRef||r.damageNumber}</span>
+        View ${r.recoverRef||r.damageNumber} in Recover
       </a>
     </div>`;
   }
@@ -1315,6 +1316,8 @@ function showFloatPopup(r){
   // Reset all tabs to default, activate Details
   document.querySelectorAll('.dp-tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.dp-tab')[0].classList.add('active');
+  const footer=document.getElementById('dp-footer');
+  if(footer) footer.style.display='flex';
   renderDpTab();
   document.getElementById('detailPanel').classList.add('open');
 }
@@ -1328,6 +1331,9 @@ function switchDpTab(tab,btn){
   _dpTab=tab;
   document.querySelectorAll('.dp-tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
+  // Hide Edit Record button on Attachments and History tabs
+  const footer=document.getElementById('dp-footer');
+  if(footer) footer.style.display=(tab==='attachments'||tab==='history')?'none':'flex';
   renderDpTab();
 }
 function renderDpTab(){
@@ -1343,18 +1349,13 @@ function renderDpTab(){
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2" width="10" height="12" rx="1.5"/><path d="M6 5h4M6 8h4M6 11h2"/></svg>`,
        label:'Category', val:r.category+' — '+(CAT_CFG[r.category]||{label:r.category}).label},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2C5.79 2 4 3.79 4 6c0 3.5 4 8 4 8s4-4.5 4-8c0-2.21-1.79-4-4-4z"/><circle cx="8" cy="6" r="1.5"/></svg>`,
-       label:'Location', val:r.roadName+(r.lat?` / ${r.lat.toFixed(4)}°, ${r.lng.toFixed(4)}°`:'')},
+       label:'Location', val:r.roadName||'—'},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12M2 8h12M2 12h8"/></svg>`,
        label:'Damage Details', val:r.location||'—'},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12v8H2zM2 4l4 4 2-2 4 4"/></svg>`,
-       label:'Stage', val:(()=>{
-         if(!activeStage) return '— (select a stage)';
-         const stageLabel=(STAGES.find(s=>s.key===activeStage)||{}).label||activeStage;
-         const stageVal=r[activeStage]||'—';
-         return `${stageVal} (${stageLabel})`;
-       })()},
+       label:'Stage', val:activeStage?(STAGES.find(s=>s.key===activeStage)||{}).label||activeStage:'—'},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>`,
-       label:'Status', val:r.status||'—', isStatus:true},
+       label:'Status', val:(activeStage?r[activeStage]:r.status)||'—', isStatus:true},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2"/></svg>`,
        label:'Priority', val:r.priority||'—', isPriority:true},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-1a4 4 0 0 1 8 0v1"/><circle cx="8" cy="6" r="3"/></svg>`,
@@ -1365,8 +1366,6 @@ function renderDpTab(){
        label:'Contractor End', val:r.constructionEnd?fmtDateOnly(r.constructionEnd):'—'},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 13v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1"/><circle cx="8" cy="5" r="3"/></svg>`,
        label:'Construction Team', val:r.constructionTeam||'—'},
-      {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5 8h6M8 5v6"/></svg>`,
-       label:'ATP Number', val:r.atpNumber||'—'},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H5l-3 2V4a1 1 0 0 1 1-1z"/></svg>`,
        label:'Comments', val:r.comments||'—'},
       {icon:`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M5 2v2M11 2v2M2 7h12"/></svg>`,
@@ -1384,7 +1383,7 @@ function renderDpTab(){
         <div class="dp-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-3"/><path d="M10 2h4v4"/><path d="M14 2L8 8"/></svg></div>
         <div class="dp-content">
           <div class="dp-label">Recover Link</div>
-          <div class="dp-value"><a href="${url}" target="_blank" rel="noopener">View in Recover &nbsp;${r.recoverRef||r.damageNumber}</a></div>
+          <div class="dp-value"><a href="${url}" target="_blank" rel="noopener">View ${r.recoverRef||r.damageNumber} in Recover</a></div>
         </div>
       </div>`;
     }
@@ -1432,50 +1431,57 @@ function renderDpTab(){
     const prepDocs=docs.filter(d=>(d.FullPath||d['{FullPath}']||d['{Path}']||d.Path||'').includes('/Preparation/'));
     const subDocs=docs.filter(d=>(d.FullPath||d['{FullPath}']||d['{Path}']||d.Path||'').includes('/Submission/'));
 
-    // Debug info
-    const debugInfo=`DMG: "${dmg}" | Docs total: ${documentsData.length} | Matched: ${docs.length}<br>Sample doc paths:<br>${documentsData.slice(0,5).map(d=>`• ${d.FullPath||d['{FullPath}']||d['{Path}']||d.Path||'(no path)'}`).join('<br>')}`;
-
     const isImg=ext=>['jpg','jpeg','png','gif','webp','bmp'].includes((ext||'').toLowerCase());
     const fileIcon=(ext)=>{
       const e=(ext||'').toLowerCase();
-      if(e==='pdf')return{bg:'#DC2626',label:'PDF'};
-      if(e==='doc'||e==='docx')return{bg:'#2563EB',label:'DOC'};
-      if(e==='xls'||e==='xlsx')return{bg:'#16A34A',label:'XLS'};
-      if(e==='ppt'||e==='pptx')return{bg:'#EA580C',label:'PPT'};
-      return{bg:'#6B7280',label:(e||'FILE').toUpperCase().slice(0,4)};
+      const docSvg=(bg,label,color='#fff')=>`
+        <div style="width:40px;height:48px;border-radius:6px;background:${bg};position:relative;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;flex-shrink:0;">
+          <div style="position:absolute;top:0;right:0;width:12px;height:12px;background:rgba(255,255,255,0.3);border-radius:0 6px 0 6px;"></div>
+          <div style="position:absolute;top:0;right:0;width:0;height:0;border-style:solid;border-width:0 12px 12px 0;border-color:transparent rgba(255,255,255,0.5) transparent transparent;"></div>
+          <span style="font-size:8px;font-weight:800;color:${color};letter-spacing:.5px;">${label}</span>
+        </div>`;
+      if(e==='pdf') return docSvg('#DC2626','PDF');
+      if(e==='doc'||e==='docx') return docSvg('#2563EB','DOC');
+      if(e==='xls'||e==='xlsx') return docSvg('#14B8A6','XLS');
+      if(e==='ppt'||e==='pptx') return docSvg('#EA580C','PPT');
+      if(e==='txt') return docSvg('#6B7280','TXT');
+      if(e==='zip'||e==='rar') return docSvg('#8D4FF7','ZIP');
+      return docSvg('#6B7280',(e||'FILE').toUpperCase().slice(0,4));
     };
     const getExt=name=>{const m=(name||'').match(/\.([a-zA-Z0-9]+)$/);return m?m[1]:'';};
     const fName=d=>d.FilenameWithExtension||d.Name||d.Title||'Untitled';
     const images=docs.filter(d=>isImg(getExt(fName(d))));
-    const documents=docs.filter(d=>{const e=getExt(fName(d)).toLowerCase();return!isImg(e)&&['pdf','doc','docx'].includes(e);});
-    const others=docs.filter(d=>{const e=getExt(fName(d)).toLowerCase();return!isImg(e)&&!['pdf','doc','docx'].includes(e);});
 
     const fileRow=(d)=>{
       const name=fName(d);
       const ext=getExt(name);
-      const ic=fileIcon(ext);
+      const iconHtml=fileIcon(ext);
       const created=d.Created||'';
       const author=d.Author||'';
       const url=d.Link||'#';
-      return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--rim);">
-        <div style="width:32px;height:32px;border-radius:6px;background:${ic.bg};color:#fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0;">${ic.label}</div>
+      return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--rim);">
+        <a href="${url}" target="_blank" rel="noopener" style="text-decoration:none;flex-shrink:0;">${iconHtml}</a>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:12px;font-weight:600;color:#111827;word-break:break-word;line-height:1.3;margin-bottom:2px;">${name}</div>
+          <a href="${url}" target="_blank" rel="noopener" style="font-size:12px;font-weight:600;color:var(--text);word-break:break-word;line-height:1.3;display:block;margin-bottom:2px;text-decoration:none;">${name}</a>
           <div style="font-size:10px;color:#9ca3af;">${ext.toUpperCase()}${created?' • Uploaded '+fmtDate(created):''}${author?' by '+author:''}</div>
         </div>
-        <a href="${url}" target="_blank" rel="noopener" title="Download" style="flex-shrink:0;color:#6b7280;padding:4px;">
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg>
+        <a href="${url}" target="_blank" rel="noopener" title="Download" style="flex-shrink:0;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:1px solid var(--rim2);color:#6b7280;background:var(--surface2);text-decoration:none;">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg>
         </a>
       </div>`;
     };
 
     document.getElementById('dp-body').innerHTML=`
       <div style="padding:12px 16px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
           <span style="font-size:13px;font-weight:700;color:var(--text);">Attachments (${docs.length})</span>
         </div>
-        <div style="font-size:9px;color:#9ca3af;background:#f3f4f6;padding:8px;border-radius:6px;margin-bottom:12px;line-height:1.6;">${debugInfo}</div>
-        ${docs.length===0?`<div style="text-align:center;padding:24px 0;color:#9ca3af;font-size:12px;">No attachments found</div>`:''}
+        ${docs.length===0?`<div style="text-align:center;padding:32px 0;color:#9ca3af;font-size:12px;">No attachments found</div>`:''}
+        ${images.length?`
+          <div style="font-size:11px;font-weight:700;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em;">Images (${images.length})</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+            ${images.map(d=>`<a href="${d.Link||'#'}" target="_blank" rel="noopener"><img src="${d.Thumbnail||d.Link||''}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;background:#e5e7eb;display:block;" onerror="this.style.background='#e5e7eb'"></a>`).join('')}
+          </div>`:''}
         ${prepDocs.length?`
           <div style="font-size:11px;font-weight:700;color:#6b7280;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em;">Preparation (${prepDocs.length})</div>
           <div style="margin-bottom:16px;">${prepDocs.map(fileRow).join('')}</div>`:''}
@@ -1635,6 +1641,9 @@ function saveDpEdit(){
 }
 function addRecord(){
   postUp({type:'ADD_RECORD',eventNo:activeEvent,category:activeCategory||''});
+}
+function addAttachment(damageNumber){
+  postUp({type:'ADD_ATTACHMENT', damageNumber:damageNumber, folderPath:'Shared Documents/IRW/Others'});
 }
 function dpEditRecord(){
   if(!_dpRecord)return;
