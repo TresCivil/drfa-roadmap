@@ -480,6 +480,10 @@ body.dark-mode .dp-edit-textarea{ background-color:var(--surface2); color:var(--
         </div>
         <div style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:12px;">
           <div class="dp-edit-field">
+            <label class="dp-edit-label">Stage</label>
+            <select id="edit-stage" class="dp-edit-select" onchange="onEditStageChange(this.value)"></select>
+          </div>
+          <div class="dp-edit-field">
             <label class="dp-edit-label" id="edit-status-label">Status</label>
             <select id="edit-status" class="dp-edit-select"></select>
           </div>
@@ -1454,23 +1458,28 @@ function renderDpTab(){
     const fName=d=>d.FilenameWithExtension||d.Name||d.Title||'Untitled';
     const images=docs.filter(d=>isImg(getExt(fName(d))));
 
+    const siteUrl='https://trescivil.sharepoint.com/sites/DRFA-ProgramManagementApp';
     const fileRow=(d)=>{
       const name=fName(d);
       const ext=getExt(name);
       const iconHtml=fileIcon(ext);
       const created=d.Created||'';
       const author=d.Author||'';
-      const url=d.Link||'#';
+      const fileUrl=d.Link||'#';
+      // Build folder URL from FullPath by stripping the filename
+      const fullPath=d.FullPath||'';
+      const folderPath=fullPath.includes('/')?fullPath.substring(0,fullPath.lastIndexOf('/')):'';
+      const folderUrl=folderPath?`${siteUrl}/${folderPath.replace(/ /g,'%20')}`:'#';
       return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--rim);">
-        <a href="${url}" target="_blank" rel="noopener" style="text-decoration:none;flex-shrink:0;">${iconHtml}</a>
+        <a href="${fileUrl}" target="_blank" rel="noopener" style="text-decoration:none;flex-shrink:0;" title="Open file">${iconHtml}</a>
         <div style="flex:1;min-width:0;">
-          <a href="${url}" target="_blank" rel="noopener" style="font-size:12px;font-weight:600;color:var(--text);word-break:break-word;line-height:1.3;display:block;margin-bottom:2px;text-decoration:none;">${name}</a>
+          <a href="${fileUrl}" target="_blank" rel="noopener" style="font-size:12px;font-weight:600;color:var(--text);word-break:break-word;line-height:1.3;display:block;margin-bottom:2px;text-decoration:none;">${name}</a>
           <div style="font-size:10px;color:#9ca3af;">${ext.toUpperCase()}${created?' • Uploaded '+fmtDate(created):''}${author?' by '+author:''}</div>
         </div>
-        <a href="${url}" target="_blank" rel="noopener" title="Download" style="flex-shrink:0;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:1px solid var(--rim2);color:#6b7280;background:var(--surface2);text-decoration:none;">
+        <a href="${fileUrl}" target="_blank" rel="noopener" title="Download file" style="flex-shrink:0;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:1px solid var(--rim2);color:#6b7280;background:var(--surface2);text-decoration:none;">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg>
         </a>
-        <a href="${url}" target="_blank" rel="noopener" title="Open file location" style="flex-shrink:0;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:1px solid var(--rim2);color:#6b7280;background:var(--surface2);text-decoration:none;margin-left:4px;">
+        <a href="${folderUrl}" target="_blank" rel="noopener" title="Open file location in SharePoint" style="flex-shrink:0;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:1px solid var(--rim2);color:#6b7280;background:var(--surface2);text-decoration:none;margin-left:4px;">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-3"/><path d="M10 2h4v4"/><path d="M7 9L14 2"/></svg>
         </a>
       </div>`;
@@ -1542,6 +1551,9 @@ function toggleDpEdit(){
   const stageKey=activeStage||'status';
   const stageLabel=(STAGES.find(s=>s.key===stageKey)||{}).label||'Construction';
   const currentStageVal=r[stageKey]||'';
+  // Populate Stage dropdown
+  const stageSel=document.getElementById('edit-stage');
+  stageSel.innerHTML=STAGES.map(s=>`<option value="${s.key}"${stageKey===s.key?' selected':''}>${s.label} Status</option>`).join('');
   // Update label to show which stage is being edited
   const lbl=document.getElementById('edit-status-label');
   if(lbl) lbl.textContent=`${stageLabel} Status`;
@@ -1572,6 +1584,21 @@ function toggleDpEdit(){
   document.getElementById('edit-construction-end').value=toDateInput(r.constructionEnd);
   document.getElementById('edit-contractor-assigned').value=r.constructionTeam||'';
   document.getElementById('edit-comments').value=r.comments||'';
+}
+function onEditStageChange(stageKey){
+  const r=_dpRecord; if(!r)return;
+  // Update status label
+  const stageLabel=(STAGES.find(s=>s.key===stageKey)||{}).label||'Construction';
+  const lbl=document.getElementById('edit-status-label');
+  if(lbl) lbl.textContent=`${stageLabel} Status`;
+  // Update stageKey stored for save
+  _dpRecord._orig_stageKey=stageKey;
+  _dpRecord._orig_status=r[stageKey]||'';
+  // Pre-fill status with current value for this stage
+  const stSel=document.getElementById('edit-status');
+  const currentVal=r[stageKey]||'';
+  Array.from(stSel.options).forEach(opt=>{opt.selected=opt.value===currentVal;});
+  if(!currentVal) stSel.selectedIndex=0;
 }
 function closeDpEdit(){
   document.getElementById('dp-edit-panel').style.display='none';
