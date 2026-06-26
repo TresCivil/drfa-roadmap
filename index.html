@@ -662,6 +662,7 @@ let priorityOptions=[];
 let pmOptions=[];
 let agrnOptions=[];
 let activityTrail=[];
+let imagesData=[];
 let documentsData=[];
 
 let currentUser='';
@@ -686,6 +687,7 @@ function loadFromHash(){
       pmOptions=(p.pmOptions||[]).sort((a,b)=>(a.SortOrder||0)-(b.SortOrder||0));
       activityTrail=p.activityTrail||[];
       agrnOptions=(p.agrnOptions||[]).map(o=>o.Name).filter(Boolean);
+      imagesData=p.images||[];
       documentsData=p.documents||[];
       // Normalise field names — Power Apps may send FullPath or {Path}
       documentsData=documentsData.map(d=>({...d, FullPath:d.FullPath||d['{FullPath}']||d['{Path}']||d.Path||''}));
@@ -1300,6 +1302,8 @@ let _dpRecord=null, _dpTab='details';
 
 function showFloatPopup(r){
   _dpRecord=r; _dpTab='details';
+  // Notify Power Apps of selected record so it can load images
+  postUp({type:'RECORD_SELECTED', damageNumber:r.damageNumber, parentID:r.parentID, category:r.category});
   const col=cc(r.category);
   const sc=STATUS_CFG[r.status]||{bg:'rgba(75,85,99,0.08)',color:'#4B5563',label:(r.status||'—').toUpperCase()};
   document.getElementById('dp-ref').textContent=r.damageNumber||r.roadName||'—';
@@ -1339,6 +1343,10 @@ function switchDpTab(tab,btn){
   // Hide Edit Record button on Attachments and History tabs
   const footer=document.getElementById('dp-footer');
   if(footer) footer.style.display=(tab==='attachments'||tab==='history')?'none':'flex';
+  // When Attachments tab clicked, notify Power Apps to load images
+  if(tab==='attachments'&&_dpRecord){
+    postUp({type:'VIEW_IMAGES', damageNumber:_dpRecord.damageNumber, parentID:_dpRecord.parentID});
+  }
   renderDpTab();
 }
 function renderDpTab(){
@@ -1489,6 +1497,18 @@ function renderDpTab(){
       <div style="padding:12px 16px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
           <span style="font-size:13px;font-weight:700;color:var(--text);">Attachments (${docs.length})</span>
+        </div>
+
+        <!-- Images section -->
+        <div style="margin-bottom:16px;padding:12px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--rim2);display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 10l4-4 3 3 2-2 5 5"/><circle cx="11.5" cy="6.5" r="1"/></svg>
+            <span id="dp-image-count" style="font-size:12px;font-weight:600;color:var(--text);">Images</span>
+          </div>
+          <button onclick="viewImages('${r.damageNumber}','${r.parentID}')" style="display:flex;align-items:center;gap:5px;font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:600;color:#fff;background:#2563EB;border:none;border-radius:6px;cursor:pointer;padding:6px 12px;">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg>
+            View All Images
+          </button>
         </div>
         ${docs.length===0?`<div style="text-align:center;padding:32px 0;color:#9ca3af;font-size:12px;">No attachments found</div>`:''}
         ${images.length?`
@@ -1687,6 +1707,9 @@ function addRecord(){
 }
 function addAttachment(damageNumber){
   postUp({type:'ADD_ATTACHMENT', damageNumber:damageNumber, folderPath:'Shared Documents/IRW/Others'});
+}
+function viewImages(damageNumber, parentID){
+  postUp({type:'VIEW_IMAGES', damageNumber:damageNumber, parentID:parentID});
 }
 function dpEditRecord(){
   if(!_dpRecord)return;
