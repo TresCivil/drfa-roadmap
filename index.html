@@ -1764,7 +1764,11 @@ function addAttachment(damageNumber){
 let _galleryImages=[];   // [{src, caption}] currently loaded
 let _lightboxIdx=0;
 
+let _imgLoadTimeout=null;
+
 function viewImages(damageNumber, parentID){
+  // Clear any previous timeout
+  if(_imgLoadTimeout) clearTimeout(_imgLoadTimeout);
   // 1. Open the modal immediately
   openImageModal(damageNumber);
   // 2. Check imagesData already loaded from hash
@@ -1779,6 +1783,15 @@ function viewImages(damageNumber, parentID){
     // 3. Ask Power Apps to load images via GetRecoverImages flow
     showImageModalLoading(true);
     postUp({type:'VIEW_IMAGES', damageNumber:damageNumber, parentID:parentID});
+    // Timeout fallback — if Power Apps doesn't respond in 20s, show empty state
+    _imgLoadTimeout=setTimeout(()=>{
+      if(document.getElementById('imgModal').classList.contains('open')&&
+         document.getElementById('imgModalLoading').style.display!=='none'){
+        showImageModalLoading(false);
+        document.getElementById('imgModalEmpty').textContent='No images returned — the flow may have timed out.';
+        document.getElementById('imgModalEmpty').style.display='block';
+      }
+    }, 20000);
   }
 }
 
@@ -1793,6 +1806,7 @@ function openImageModal(damageNumber){
 }
 
 function closeImageModal(){
+  if(_imgLoadTimeout){ clearTimeout(_imgLoadTimeout); _imgLoadTimeout=null; }
   document.getElementById('imgModal').classList.remove('open');
   document.body.style.overflow='';
 }
@@ -1803,34 +1817,41 @@ function showImageModalLoading(show){
 }
 
 function renderImageGallery(imgs){
+  if(_imgLoadTimeout){ clearTimeout(_imgLoadTimeout); _imgLoadTimeout=null; }
   showImageModalLoading(false);
   const grid=document.getElementById('imgModalGrid');
   const empty=document.getElementById('imgModalEmpty');
   if(!imgs||!imgs.length){
-    grid.innerHTML=''; empty.style.display='block'; _galleryImages=[]; return;
+    grid.innerHTML=''; empty.textContent='No images found for this record.'; empty.style.display='block'; _galleryImages=[]; return;
   }
   empty.style.display='none';
-  _galleryImages=imgs.map(img=>{
-    // Support multiple field name conventions from Civica / Power Apps
-    const src = img.ImageBase64
-      ? 'data:image/jpeg;base64,'+img.ImageBase64
-      : (img.Url||img.url||img.ImageUrl||img.imageUrl||img.Link||img.ThumbnailUrl||'');
-    const caption = img.Caption||img.caption||img.FileName||img.fileName||img.Name||img.name||'';
+  _galleryImages=imgs.map((img,i)=>{
+    // Resolve src — handle: already full data URI, raw base64, or URL
+    let src='';
+    const b64 = img.ImageBase64||img.imageBase64||img.Base64||img.base64||img.Content||img.content||'';
+    if(b64){
+      src = b64.startsWith('data:') ? b64 : 'data:image/jpeg;base64,'+b64;
+    } else {
+      src = img.Url||img.url||img.ImageUrl||img.imageUrl||img.Link||img.link||img.ThumbnailUrl||img.thumbnailUrl||'';
+    }
+    const caption = img.Caption||img.caption||img.FileName||img.fileName||img.Name||img.name||img.Title||img.title||`Image ${i+1}`;
+    console.log(`[DRFA Map] image[${i}] src=${src.substring(0,60)} caption=${caption}`);
     return {src, caption};
   }).filter(i=>i.src);
 
+  if(!_galleryImages.length){
+    grid.innerHTML=''; empty.textContent='Images were returned but could not be displayed (unsupported format).'; empty.style.display='block'; return;
+  }
+
   grid.innerHTML=_galleryImages.map((img,i)=>`
     <div class="img-thumb-wrap" onclick="openLightbox(${i})" title="${img.caption}">
-      <img src="${img.src}" alt="${img.caption}" onerror="this.parentElement.style.display='none'">
+      <img src="${img.src}" alt="${img.caption}" onerror="this.parentElement.style.opacity='0.4'">
       ${img.caption?`<div class="img-thumb-caption">${img.caption}</div>`:''}
     </div>`).join('');
 
-  if(!_galleryImages.length){
-    grid.innerHTML=''; empty.style.display='block';
-  }
-  document.getElementById('imgModalTitle').textContent =
-    document.getElementById('imgModalTitle').textContent.split('(')[0].trim() +
-    ` (${_galleryImages.length})`;
+  // Update title with count
+  const titleEl=document.getElementById('imgModalTitle');
+  titleEl.textContent=titleEl.textContent.replace(/\s*\(\d+\)$/,'')+` (${_galleryImages.length})`;
 }
 
 function openLightbox(idx){
@@ -1986,18 +2007,26 @@ window.addEventListener('message', function(e){
       applyTheme(msg.theme);
     }
     // Images returned from GetRecoverImages Power Automate flow
-    if(msg.type==='RECEIVE_IMAGES'){
-      const imgs=Array.isArray(msg.images)?msg.images:(msg.data&&Array.isArray(msg.data)?msg.data:[]);
-      // Store in imagesData for re-use (keyed by damageNumber / parentID)
+    // Handle multiple possible message type names from Power Apps
+    const isImgMsg = msg.type==='RECEIVE_IMAGES' || msg.type==='receiveImages' ||
+                     msg.type==='IMAGES_LOADED'  || msg.type==='imagesLoaded'  ||
+                     msg.type==='GET_IMAGES_RESPONSE';
+    if(isImgMsg){
+      // Unwrap images from various possible envelope shapes
+      let imgs = Array.isArray(msg.images)  ? msg.images
+               : Array.isArray(msg.data)    ? msg.data
+               : Array.isArray(msg.records) ? msg.records
+               : Array.isArray(msg)         ? msg
+               : [];
+      console.log('[DRFA Map] RECEIVE_IMAGES — raw count:', imgs.length, 'sample:', imgs[0]);
+      // Store in imagesData for re-use
       if(imgs.length) imagesData=[...imagesData,...imgs];
-      // Render into the open gallery (if it's still open)
       if(document.getElementById('imgModal').classList.contains('open')){
         renderImageGallery(imgs);
       }
-      // Also update the image count badge in the Attachments tab
       if(_dpRecord&&_dpTab==='attachments') renderDpTab();
     }
-  }catch(e){}
+  }catch(err){ console.error('[DRFA Map] postMessage handler error:', err); }
 });
 
 /* ── BOOT ── */
