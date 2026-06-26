@@ -1761,41 +1761,11 @@ function addAttachment(damageNumber){
   postUp({type:'ADD_ATTACHMENT', damageNumber:damageNumber, folderPath:'Shared Documents/IRW/Others'});
 }
 /* ── IMAGE GALLERY ── */
-let _galleryImages=[];   // [{src, caption}] currently loaded
+let _galleryImages=[];
 let _lightboxIdx=0;
-let _imgLoadTimeout=null;
-let _pendingImageDamageNo='';  // set while waiting for hash to come back with images
-let _pendingImageParentID='';
 
 function viewImages(damageNumber, parentID){
-  // Clear any previous timeout
-  if(_imgLoadTimeout) clearTimeout(_imgLoadTimeout);
-  // 1. Open the modal immediately
-  openImageModal(damageNumber);
-  // 2. Check imagesData already loaded from hash
-  const localImgs = imagesData.filter(img=>{
-    const dmg = img.Damage_Number||img.damageNumber||img.damage_number||'';
-    const pid = img.ParentID||img.parentID||img.parentId||'';
-    return dmg===damageNumber || pid===parentID;
-  });
-  if(localImgs.length){
-    renderImageGallery(localImgs);
-  } else {
-    // 3. Ask Power Apps to load images — store pending IDs so hashchange can resolve them
-    _pendingImageDamageNo = damageNumber;
-    _pendingImageParentID = parentID;
-    showImageModalLoading(true);
-    postUp({type:'VIEW_IMAGES', damageNumber:damageNumber, parentID:parentID});
-    // Timeout fallback — if Power Apps doesn't respond in 30s, show empty state
-    _imgLoadTimeout=setTimeout(()=>{
-      if(document.getElementById('imgModal').classList.contains('open')&&
-         document.getElementById('imgModalLoading').style.display!=='none'){
-        showImageModalLoading(false);
-        document.getElementById('imgModalEmpty').textContent='No images returned — the flow may have timed out.';
-        document.getElementById('imgModalEmpty').style.display='block';
-      }
-    }, 30000);
-  }
+  postUp({type:'VIEW_IMAGES', damageNumber:damageNumber, parentID:parentID});
 }
 
 function openImageModal(damageNumber){
@@ -1809,8 +1779,6 @@ function openImageModal(damageNumber){
 }
 
 function closeImageModal(){
-  if(_imgLoadTimeout){ clearTimeout(_imgLoadTimeout); _imgLoadTimeout=null; }
-  _pendingImageDamageNo=''; _pendingImageParentID='';
   document.getElementById('imgModal').classList.remove('open');
   document.body.style.overflow='';
 }
@@ -1965,18 +1933,6 @@ function reloadData(){
     buildEventTabs(); buildStageDropdown(); buildCatChips(); populateDropdowns();
     renderStats(); renderList(); updateHasDamageBtn(); updatePins();
     setTimeout(alignStatsBar, 50);
-    // If gallery modal is open and waiting, check if images just arrived
-    if(_pendingImageParentID && document.getElementById('imgModal').classList.contains('open')){
-      const arrived = imagesData.filter(img=>{
-        const dmg = img.Damage_Number||img.damageNumber||img.damage_number||'';
-        const pid = img.ParentID||img.parentID||img.parentId||'';
-        return dmg===_pendingImageDamageNo || pid===_pendingImageParentID;
-      });
-      if(arrived.length){
-        _pendingImageDamageNo=''; _pendingImageParentID='';
-        renderImageGallery(arrived);
-      }
-    }
   }
 }
 
@@ -2022,27 +1978,7 @@ window.addEventListener('message', function(e){
     if(msg.type==='SET_THEME'){
       applyTheme(msg.theme);
     }
-    // Images returned from GetRecoverImages Power Automate flow
-    // Handle multiple possible message type names from Power Apps
-    const isImgMsg = msg.type==='RECEIVE_IMAGES' || msg.type==='receiveImages' ||
-                     msg.type==='IMAGES_LOADED'  || msg.type==='imagesLoaded'  ||
-                     msg.type==='GET_IMAGES_RESPONSE';
-    if(isImgMsg){
-      // Unwrap images from various possible envelope shapes
-      let imgs = Array.isArray(msg.images)  ? msg.images
-               : Array.isArray(msg.data)    ? msg.data
-               : Array.isArray(msg.records) ? msg.records
-               : Array.isArray(msg)         ? msg
-               : [];
-      console.log('[DRFA Map] RECEIVE_IMAGES — raw count:', imgs.length, 'sample:', imgs[0]);
-      // Store in imagesData for re-use
-      if(imgs.length) imagesData=[...imagesData,...imgs];
-      if(document.getElementById('imgModal').classList.contains('open')){
-        renderImageGallery(imgs);
-      }
-      if(_dpRecord&&_dpTab==='attachments') renderDpTab();
-    }
-  }catch(err){ console.error('[DRFA Map] postMessage handler error:', err); }
+  }catch(e){}
 });
 
 /* ── BOOT ── */
