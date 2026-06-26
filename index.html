@@ -1919,7 +1919,9 @@ function togglePane(){
 /* ── postMessage → Power Apps ── */
 function postUp(obj){
   try{
-    const msg=JSON.stringify(obj);
+    // Add unique timestamp so PCF lastSaved always changes and triggers OnChange
+    const payload=Object.assign({},obj,{_ts:Date.now()});
+    const msg=JSON.stringify(payload);
     // Method 1: postMessage to parent
     window.parent.postMessage(msg,'*');
     // Method 2: store in sessionStorage for PCF to read
