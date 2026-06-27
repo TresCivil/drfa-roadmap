@@ -1355,7 +1355,7 @@ let _dpRecord=null, _dpTab='details';
 function showFloatPopup(r){
   _dpRecord=r; _dpTab='details';
   // Notify Power Apps of selected record so it can load images
-  postUp({task:{type:'RECORD_SELECTED', guid:r.parentID, damageNumber:r.damageNumber, parentID:r.parentID, category:r.category}});
+  postUp({type:'RECORD_SELECTED', task:{type:'RECORD_SELECTED', guid:r.parentID, damageNumber:r.damageNumber, parentID:r.parentID, category:r.category}});
   const col=cc(r.category);
   const sc=STATUS_CFG[r.status]||{bg:'rgba(75,85,99,0.08)',color:'#4B5563',label:(r.status||'—').toUpperCase()};
   document.getElementById('dp-ref').textContent=r.damageNumber||r.roadName||'—';
@@ -1397,7 +1397,7 @@ function switchDpTab(tab,btn){
   if(footer) footer.style.display=(tab==='attachments'||tab==='history')?'none':'flex';
   // When Attachments tab clicked, notify Power Apps to load images
   if(tab==='attachments'&&_dpRecord){
-    postUp({task:{type:'VIEW_IMAGES', guid:_dpRecord.parentID, damageNumber:_dpRecord.damageNumber, parentID:_dpRecord.parentID}});
+    postUp({type:'VIEW_IMAGES', task:{type:'VIEW_IMAGES', guid:_dpRecord.parentID, damageNumber:_dpRecord.damageNumber, parentID:_dpRecord.parentID}});
   }
   renderDpTab();
 }
@@ -1765,7 +1765,7 @@ let _galleryImages=[];
 let _lightboxIdx=0;
 
 function viewImages(damageNumber, parentID){
-  postUp({task:{type:'VIEW_IMAGES', guid:parentID, damageNumber:damageNumber, parentID:parentID}});
+  postUp({type:'VIEW_IMAGES', task:{type:'VIEW_IMAGES', guid:parentID, damageNumber:damageNumber, parentID:parentID}});
 }
 
 function openImageModal(damageNumber){
