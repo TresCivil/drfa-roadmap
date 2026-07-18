@@ -1270,6 +1270,29 @@ function initMap(){
     // No Azure popup needed — using custom float panel
     setTimeout(updatePins, 200);
   });
+  watchMapContainerSize();
+}
+
+/* ── KEEP MAP CANVAS IN SYNC WITH ITS CONTAINER ──
+   Azure Maps draws its canvas at a fixed pixel size captured when the map
+   loads (or last resized). It does NOT automatically redraw when the
+   container element changes size — which happens whenever the host embed
+   (e.g. a Power Apps HTML control bound to Parent.Width/Parent.Height)
+   settles on its real size after initial load, or is resized later.
+   A ResizeObserver on the actual DOM element catches every such change,
+   regardless of cause (window resize, host container resize, panel toggle,
+   browser zoom), and tells the map to redraw at the new size — so the
+   visible map always matches the container without needing a manual zoom. */
+let _mapResizeTimer=null;
+function watchMapContainerSize(){
+  const el=document.getElementById('mapArea');
+  if(!el||!('ResizeObserver' in window))return;
+  const ro=new ResizeObserver(()=>{
+    if(!azMap)return;
+    clearTimeout(_mapResizeTimer);
+    _mapResizeTimer=setTimeout(()=>{ azMap.resize(); },80);
+  });
+  ro.observe(el);
 }
 
 /* ── UPDATE PINS — batched via rAF to avoid blocking ── */
