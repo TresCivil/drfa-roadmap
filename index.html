@@ -738,6 +738,8 @@ function loadFromHash(){
       // Set activeEvent from Power Apps AGRN selection
       if(p.currentAGRN && String(p.currentAGRN).trim()){
         activeEvent=String(p.currentAGRN).trim();
+      } else {
+        activeEvent=''; // blank = show all records
       }
       imagesData=p.images||[];
       documentsData=p.documents||[];
@@ -855,7 +857,7 @@ function populateStatusDropdown(){
 
 /* ── DROPDOWNS ── */
 function populateDropdowns(){
-  const base=records.filter(r=>r.eventNo===activeEvent);
+  const base=activeEvent?records.filter(r=>r.eventNo===activeEvent):records;
   const damages=[...new Set(base.map(r=>r.damageNumber).filter(Boolean))].sort();
   const roads=[...new Set(base.map(r=>r.roadName).filter(Boolean))].sort();
   const dS=document.getElementById('filterDamage'), rS=document.getElementById('filterRoad');
@@ -976,7 +978,7 @@ function fmtDateOnly(d){
 function getFiltered(){
   const q=filterSearch.toLowerCase();
   return records.filter(r=>{
-    if(r.eventNo!==activeEvent)return false;
+    if(activeEvent&&r.eventNo!==activeEvent)return false;
     if(filterHasDamage&&!r.damageNumber)return false;
     if(activeCategory&&r.category!==activeCategory)return false;
     if(filterDamage&&r.damageNumber!==filterDamage)return false;
@@ -1046,7 +1048,7 @@ function renderList(){
   // Count records matching all current filters but excluding GPS check
   const q=filterSearch.toLowerCase();
   const totalFiltered=allRecords.filter(r=>{
-    if(r.eventNo&&r.eventNo!==activeEvent)return false;
+    if(activeEvent&&r.eventNo&&r.eventNo!==activeEvent)return false;
     if(filterHasDamage&&!r.damageNumber)return false;
     if(activeCategory&&r.category!==activeCategory)return false;
     if(filterDamage&&r.damageNumber!==filterDamage)return false;
