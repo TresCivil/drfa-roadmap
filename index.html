@@ -362,13 +362,6 @@ body.dark-mode .dp-edit-textarea{ background-color:var(--surface2); color:var(--
       </div>
     </div>
 
-    <div class="fb-sep"></div>
-
-    <!-- AGRN -->
-    <div class="fb-group">
-      <div class="fb-group-label">AGRN</div>
-      <select class="fb-select" id="eventTabs" onchange="setEvent(this.value)"></select>
-    </div>
 
     <!-- Category -->
     <div class="fb-group">
@@ -742,6 +735,10 @@ function loadFromHash(){
       pmOptions=(p.pmOptions||[]).sort((a,b)=>(a.SortOrder||0)-(b.SortOrder||0));
       activityTrail=p.activityTrail||[];
       agrnOptions=(p.agrnOptions||[]).map(o=>o.Name).filter(Boolean);
+      // Set activeEvent from Power Apps AGRN selection
+      if(p.currentAGRN && String(p.currentAGRN).trim()){
+        activeEvent=String(p.currentAGRN).trim();
+      }
       imagesData=p.images||[];
       documentsData=p.documents||[];
       // Normalise field names — Power Apps may send FullPath or {Path}
@@ -797,28 +794,6 @@ function renderStats(){
   set('statOpen',open);
   set('statOverdue',overdue);
   set('statCompleted',completed);
-}
-
-/* ── EVENT DROPDOWN ── */
-function buildEventTabs(){
-  const sel=document.getElementById('eventTabs');
-  sel.innerHTML=EVENT_KEYS.map(ev=>`<option value="${ev}"${activeEvent===ev?' selected':''}>${ev}</option>`).join('');
-}
-function setEvent(ev){
-  activeEvent=ev; activeCategory=null; filterDamage=""; filterRoad=""; filterPM=""; filterPriority=""; filterStatus=""; activeStage=""; filterHasDamage=true;
-  document.getElementById("filterDamage").value="";
-  document.getElementById("filterRoad").value="";
-  document.getElementById("filterPM").value="";
-  document.getElementById("filterPriority").value="";
-  document.getElementById("filterCategory").value="";
-  document.getElementById("filterStage").value="";
-  document.getElementById("filterStatus").value="";
-  document.getElementById("filterStatus").disabled=true;
-  updateHasDamageBtn();
-  Object.keys(groupOpen).forEach(k=>{groupOpen[k]=false;});
-  buildEventTabs(); buildStageDropdown(); buildCatChips(); populateDropdowns();
-  renderStats(); renderList(); updatePins();
-  if(popup)popup.close(); closeFloatPopup();
 }
 
 /* ── CATEGORY DROPDOWN ── */
@@ -1937,7 +1912,7 @@ function postUp(obj){
 /* ── RELOAD DATA ── called whenever hash changes ── */
 function reloadData(){
   if(loadFromHash()){
-    buildEventTabs(); buildStageDropdown(); buildCatChips(); populateDropdowns();
+    buildStageDropdown(); buildCatChips(); populateDropdowns();
     renderStats(); renderList(); updateHasDamageBtn(); updatePins();
     setTimeout(alignStatsBar, 50);
   }
@@ -1999,7 +1974,7 @@ if(!loadFromHash()){
   activeEvent=EVENT_KEYS[EVENT_KEYS.length-1]||'';
   document.getElementById('connLabel').textContent='Demo';
 }
-buildEventTabs(); buildStageDropdown(); buildCatChips(); populateDropdowns(); renderStats(); renderList(); updateHasDamageBtn();
+buildStageDropdown(); buildCatChips(); populateDropdowns(); renderStats(); renderList(); updateHasDamageBtn();
 setTimeout(alignStatsBar, 50);
 // Default collapsed side pane
 (()=>{
