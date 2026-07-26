@@ -738,8 +738,11 @@ function loadFromHash(){
       // Set activeEvent from Power Apps AGRN selection
       let agrnFromPowerApps=false;
       if(p.currentAGRN!==undefined){
-        activeEvent=String(p.currentAGRN||'').trim();
-        agrnFromPowerApps=true;
+        if(String(p.currentAGRN||'').trim()){
+          activeEvent=String(p.currentAGRN).trim();
+        }
+        // if blank, activeEvent will be set from EVENT_KEYS below
+        agrnFromPowerApps=false; // always let EVENT_KEYS set default
       }
       imagesData=p.images||[];
       documentsData=p.documents||[];
@@ -763,8 +766,8 @@ function loadFromHash(){
       const evKeys=[...new Set(records.map(r=>r.eventNo).filter(Boolean))].sort();
       if(evKeys.length) EVENT_KEYS.splice(0,EVENT_KEYS.length,...evKeys);
     }
-    // Only set activeEvent from EVENT_KEYS if Power Apps didn't explicitly pass currentAGRN
-    if(!agrnFromPowerApps){
+    // Use currentAGRN if set, otherwise default to last (latest) EVENT_KEY
+    if(!activeEvent){
       activeEvent=EVENT_KEYS[EVENT_KEYS.length-1]||'';
     }
     document.getElementById('connLabel').textContent='Dataverse';
@@ -1982,6 +1985,7 @@ window.addEventListener('message', function(e){
 
 /* ── BOOT ── */
 if(!loadFromHash()){
+  console.warn('[DRFA] loadFromHash failed — showing demo data. Hash length:', window.location.hash.length);
   const _all=DEMO.map(normalise);
   records=_all.filter(r=>!(r.lat===0&&r.lng===0)&&!isNaN(r.lat)&&!isNaN(r.lng)&&r.lat!==null&&r.lng!==null);
   allRecords=_all;
@@ -1989,7 +1993,7 @@ if(!loadFromHash()){
   const evKeys=[...new Set(records.map(r=>r.eventNo).filter(Boolean))].sort();
   if(evKeys.length) EVENT_KEYS.splice(0,EVENT_KEYS.length,...evKeys);
   activeEvent=EVENT_KEYS[EVENT_KEYS.length-1]||'';
-  document.getElementById('connLabel').textContent='Demo';
+  document.getElementById('connLabel').textContent='Demo (hash:'+window.location.hash.length+')';
 }
 buildStageDropdown(); buildCatChips(); populateDropdowns(); renderStats(); renderList(); updateHasDamageBtn();
 setTimeout(alignStatsBar, 50);
