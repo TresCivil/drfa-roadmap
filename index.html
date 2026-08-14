@@ -137,6 +137,9 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
 #dp-header{padding:14px 16px 10px;border-bottom:1px solid var(--rim);flex-shrink:0;}
 #dp-close{position:absolute;top:10px;right:12px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(0,0,0,.05);border:none;cursor:pointer;font-size:14px;color:#6b7280;z-index:1;}
 #dp-close:hover{background:rgba(0,0,0,.1);color:var(--text);}
+#dp-view-images-btn{position:absolute;top:10px;right:44px;height:26px;padding:0 8px;display:flex;align-items:center;gap:4px;border-radius:13px;background:#2563EB;border:none;cursor:pointer;font-size:10px;font-weight:700;color:#fff;z-index:1;white-space:nowrap;transition:background .15s;}
+#dp-view-images-btn:hover{background:#1d4ed8;}
+#dp-view-images-btn svg{flex-shrink:0;}
 #dp-ref{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;}
 #dp-status-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:3px 9px;border-radius:5px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;}
 .dp-tabs{display:flex;border-bottom:1px solid var(--rim);flex-shrink:0;}
@@ -255,6 +258,7 @@ body.dark-mode #detailPanel{ background-color:var(--surface); border-color:var(-
 body.dark-mode #dp-header{ border-color:var(--rim); }
 body.dark-mode #dp-ref{ color:var(--text); background:transparent; }
 body.dark-mode #dp-close{ color:var(--muted); background:rgba(255,255,255,.06); }
+body.dark-mode #dp-view-images-btn{ background:#2563EB; color:#fff; }
 body.dark-mode .dp-tabs{ border-color:var(--rim); }
 body.dark-mode .dp-tab{ color:var(--muted); }
 body.dark-mode .dp-tab.active{ color:var(--text); }
@@ -465,6 +469,10 @@ body.dark-mode .dp-edit-textarea{ background-color:var(--surface2); color:var(--
   <!-- Right detail panel — outside mapArea so overflow:hidden doesn't clip it -->
   <div id="detailPanel">
       <button id="dp-close" onclick="closeFloatPopup()">✕</button>
+      <button id="dp-view-images-btn" onclick="viewImages(_dpRecord&&_dpRecord.damageNumber,_dpRecord&&_dpRecord.parentID)" style="display:none;">
+        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg>
+        Images
+      </button>
       <div id="dp-header">
         <div id="dp-ref">—</div>
         <div id="dp-status-badge"></div>
@@ -1363,12 +1371,18 @@ function showFloatPopup(r){
   if(footer) footer.style.display='flex';
   renderDpTab();
   document.getElementById('detailPanel').classList.add('open');
+  // Show view images button
+  const vib=document.getElementById('dp-view-images-btn');
+  if(vib) vib.style.display='flex';
 }
 function closeFloatPopup(){
   document.getElementById('detailPanel').classList.remove('open');
   document.querySelectorAll('.list-card').forEach(el=>el.classList.remove('active'));
   highlightPin(null);
   _dpRecord=null;
+  // Hide view images button
+  const vib=document.getElementById('dp-view-images-btn');
+  if(vib) vib.style.display='none';
 }
 function switchDpTab(tab,btn){
   _dpTab=tab;
