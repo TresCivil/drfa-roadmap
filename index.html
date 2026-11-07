@@ -189,6 +189,15 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
 .dp-muted{color:#9CA3AF;font-weight:400;}
 .dp-maps{display:flex;gap:8px;margin-top:12px;}
 .dp-strip{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.dp-strip-wrap{position:relative;}
+.dp-nav{position:absolute;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,.95);box-shadow:0 1px 4px rgba(0,0,0,.3);color:#111827;font-size:20px;line-height:28px;padding:0;cursor:pointer;z-index:2;}
+.dp-nav-l{left:-6px;} .dp-nav-r{right:-6px;}
+.dp-nav:disabled{opacity:.35;cursor:default;}
+.dp-strip-foot{display:flex;align-items:center;justify-content:space-between;margin:6px 0 2px;font-size:12px;}
+.dp-strip-foot .dp-strip-link{margin:0;}
+.dp-strip-pos{color:#6B7280;font-size:11.5px;}
+.dp-ph-big{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.dp-ph-big small{font-size:10.5px;color:#6B7280;}
 .dp-ph{position:relative;height:110px;border-radius:8px;overflow:hidden;background:#E5E7EB;color:#9CA3AF;display:flex;align-items:center;justify-content:center;cursor:pointer;}
 .dp-ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
 .dp-ph span{position:absolute;left:8px;bottom:8px;max-width:calc(100% - 16px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:rgba(0,0,0,.6);color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;}
@@ -1589,7 +1598,7 @@ function fitAll(){
 let _dpRecord=null, _dpTab='details';
 
 function showFloatPopup(r){
-  _dpRecord=r; _dpTab='details';
+  _dpRecord=r; _dpTab='details'; stripStart=0; _stripTotal=0;
   // Notify Power Apps of selected record so it can load images
   postUp({type:'TASK_UPDATED', task:{type:'RECORD_SELECTED', guid:r.parentID, damageNumber:r.damageNumber, parentID:r.parentID, category:r.category}});
   const col=cc(r.category);
@@ -1683,19 +1692,26 @@ function renderDpTab(){
         :`https://recover-nsw.civicagov.com/Damages/ListView?q=${r.parentID}&stq=${r.recoverRef||''}&e=${r.parentID}`;
       recover=`<a href="${url}" target="_blank" rel="noopener">View ${e(r.recoverRef||r.damageNumber)} in Recover</a>`;
     }
-    // Photo strip: first 2 Recover photos, sent by the app after the RECORD_SELECTED message
-    const ps=photoStrip&&photoStrip.dn===r.damageNumber?photoStrip:null;
+    // Photo strip: 2 Recover photos at a time, sent by the app (tmrMapStrip) after RECORD_SELECTED / STRIP_PAGE. Arrows page through the rest.
+    const ps=photoStrip&&photoStrip.dn===r.damageNumber&&(photoStrip.start||0)===stripStart?photoStrip:null;
     const camSvg='<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg>';
+    const kb=n=>n>=1048576?(n/1048576).toFixed(1)+' MB':Math.round(n/1024)+' KB';
+    // Known total from an earlier strip of this damage keeps the arrows steady while the next pair loads
+    if(photoStrip&&photoStrip.dn===r.damageNumber&&photoStrip.count>0)_stripTotal=photoStrip.count;
+    const total=_stripTotal;
+    const nav=total>2?`<button class="dp-nav dp-nav-l" ${stripStart<=0?'disabled':''} onclick="stripMove(-2)" aria-label="Previous photos">‹</button><button class="dp-nav dp-nav-r" ${stripStart+2>=total?'disabled':''} onclick="stripMove(2)" aria-label="Next photos">›</button>`:'';
+    const pos=total>2?`<span class="dp-strip-pos">${stripStart+1}–${Math.min(stripStart+2,total)} of ${total}</span>`:'';
     let strip;
     if(!r.parentID||(ps&&ps.count===0)){
       strip=`<div class="dp-strip-note">${r.parentID?'No photos in Recover for this damage yet.':'No Recover photos for this damage.'}</div>`;
     } else if(ps&&ps.count<0){
       strip=`<div class="dp-strip-note">Couldn't load photos from Recover. <a href="#" onclick="event.preventDefault();camOpen()">Open photos</a></div>`;
     } else if(!ps){
-      strip=`<div class="dp-strip"><div class="dp-ph dp-ph-load">${camSvg}</div><div class="dp-ph dp-ph-load">${camSvg}</div></div><div class="dp-strip-link dp-muted">Loading photos…</div>`;
+      const n=total?Math.min(2,total-stripStart):2;
+      strip=`<div class="dp-strip-wrap"><div class="dp-strip">${Array.from({length:Math.max(1,n)}).map(()=>`<div class="dp-ph dp-ph-load">${camSvg}</div>`).join('')}</div>${nav}</div><div class="dp-strip-foot"><span class="dp-muted">Loading photos…</span>${pos}</div>`;
     } else {
-      const tiles=(ps.imgs||[]).slice(0,2).map(im=>`<div class="dp-ph" onclick="camOpen()" title="Open photos">${im.src?`<img src="data:image/jpeg;base64,${im.src}" alt="">`:camSvg}<span>${e(im.cap||'Photo')}</span></div>`).join('');
-      strip=`<div class="dp-strip">${tiles}</div><a class="dp-strip-link" href="#" onclick="event.preventDefault();camOpen()">View all ${ps.count} photo${ps.count===1?'':'s'}</a>`;
+      const tiles=(ps.imgs||[]).slice(0,2).map(im=>`<div class="dp-ph" onclick="camOpen()" title="${im.src?'Open photos':'Too large to preview here ('+kb((im.len||0)*0.75)+'). Click to open photos.'}">${im.src?`<img src="data:image/jpeg;base64,${im.src}" alt="">`:`<div class="dp-ph-big">${camSvg}<small>Too large to preview</small></div>`}<span>${e(im.cap||'Photo')}</span></div>`).join('');
+      strip=`<div class="dp-strip-wrap"><div class="dp-strip">${tiles}</div>${nav}</div><div class="dp-strip-foot"><a class="dp-strip-link" href="#" onclick="event.preventDefault();camOpen()">View all ${ps.count} photo${ps.count===1?'':'s'}</a>${pos}</div>`;
     }
     document.getElementById('dp-body').innerHTML=`<div style="padding:14px 18px 18px;">
       ${strip}
@@ -1871,6 +1887,14 @@ function renderDpTab(){
   }// end switch
 }
 // v86: Open full record. The app opens EWRecordScreen or IRWRecordScreen for this damage.
+// Carousel: ask the app for the next / previous 2 photos
+let stripStart=0, _stripTotal=0;
+function stripMove(d){
+  const r=_dpRecord; if(!r)return;
+  const ns=Math.max(0,stripStart+d); if(_stripTotal&&ns>=_stripTotal)return;
+  stripStart=ns; refreshStripView();
+  postUp({type:'TASK_UPDATED', task:{type:'STRIP_PAGE', damageNumber:r.damageNumber, parentID:r.parentID, category:r.category, start:ns}});
+}
 function camOpen(){const r=_dpRecord;if(r)viewImages(r.damageNumber,r.parentID);}
 function openFullRecord(){
   const r=_dpRecord; if(!r)return;
