@@ -399,6 +399,18 @@ body.dark-mode .dp-edit-textarea{ background-color:var(--surface2); color:var(--
       <select class="fb-select" id="filterPriority"><option value="">All</option></select>
     </div>
 
+    <!-- Area (v86): depot of the damage's road asset, sent by Power Apps as "area" -->
+    <div class="fb-group">
+      <div class="fb-group-label">Area</div>
+      <select class="fb-select" id="filterArea"><option value="">All</option></select>
+    </div>
+
+    <!-- Lifecycle stage (v86): the stage the record stepper shows, sent by Power Apps as "life" -->
+    <div class="fb-group">
+      <div class="fb-group-label">Lifecycle stage</div>
+      <select class="fb-select" id="filterLife"><option value="">All</option></select>
+    </div>
+
     <div class="fb-sep"></div>
 
     <!-- Stage -->
@@ -652,7 +664,8 @@ function normalise(raw){
     atpNumber:    g('ATP_Number','atpNumber')                                                   || '',
     recoverRef:   dmgNo,
     pm:           g('PM','cr8fb_PM','pm')                                                        || '',
-    depot:        g('Depot','depot')                                                              || '',
+    depot:        g('Depot','depot','area')                                                       || '',
+    life:         g('Lifecycle_Stage','lifecycleStage','life')                                    || '',
     priority:       g('Priority','priority')                                                        || '',
     status:         g('Construction_Status','constructionStatus','status')                          || '',
     scopeStatus:    g('Scope_Status','scopeStatus')                                                 || '',
@@ -677,7 +690,7 @@ const STAGES=[
 ];
 
 /* ── STATE ── */
-let records=[], allRecords=[], activeEvent='EN0001', activeCategory=null, filterDamage='', filterRoad='', filterPM='', filterPriority='', filterStatus='', filterHasDamage=true, filterSearch='', activeStage='status';
+let records=[], allRecords=[], activeEvent='EN0001', activeCategory=null, filterDamage='', filterRoad='', filterPM='', filterPriority='', filterArea='', filterLife='', filterStatus='', filterHasDamage=true, filterSearch='', activeStage='status';
 let azMap=null, popup=null, markers=[], selectedMarker=null;
 
 function highlightPin(marker){
@@ -698,6 +711,7 @@ let EVENT_KEYS=['EN0001','EN0002'];
 /* ── STATUS OPTIONS from Dropdown Options table ── */
 let statusOptions=[];
 let priorityOptions=[];
+let lifeOptions=[];
 let pmOptions=[];
 let agrnOptions=[];
 let activityTrail=[];
@@ -723,6 +737,7 @@ function loadFromHash(){
       rawRecords=p.records;
       statusOptions=(p.statusOptions||[]).sort((a,b)=>(a.SortOrder||0)-(b.SortOrder||0));
       priorityOptions=(p.priorityOptions||[]).sort((a,b)=>(a.SortOrder||0)-(b.SortOrder||0));
+      lifeOptions=(p.lifeOptions||[]).sort((a,b)=>(a.SortOrder||0)-(b.SortOrder||0));
       pmOptions=(p.pmOptions||[]).sort((a,b)=>(a.SortOrder||0)-(b.SortOrder||0));
       activityTrail=p.activityTrail||[];
       agrnOptions=(p.agrnOptions||[]).map(o=>o.Name).filter(Boolean);
@@ -743,7 +758,7 @@ function loadFromHash(){
       applyTheme(p.theme);
     } else if(Array.isArray(p)&&p.length){
       rawRecords=p;
-      statusOptions=[]; priorityOptions=[]; pmOptions=[]; activityTrail=[];
+      statusOptions=[]; priorityOptions=[]; lifeOptions=[]; pmOptions=[]; activityTrail=[];
     } else {
       return false;
     }
@@ -880,6 +895,21 @@ function populateDropdowns(){
   if(roads.includes(cr))rS.value=cr;
   if(pms.includes(cp))pS.value=cp;
   if(priorities.includes(cpr))prS.value=cpr;
+
+  // Area (v86): areas in the data, A-Z
+  const aS=document.getElementById('filterArea'), ca=aS.value;
+  const areas=[...new Set(base.map(r=>r.depot).filter(Boolean))].sort();
+  aS.innerHTML='<option value="">All</option>'+areas.map(v=>`<option value="${v}">${v}</option>`).join('');
+  if(areas.includes(ca))aS.value=ca; else {aS.value='';filterArea='';}
+
+  // Lifecycle stage (v86): lifecycle order from Power Apps (lifeOptions), else the stages in the data A-Z
+  const lS=document.getElementById('filterLife'), cl=lS.value;
+  const inData=new Set(base.map(r=>r.life).filter(Boolean));
+  const lifes=lifeOptions.length
+    ? lifeOptions.map(o=>o.Name).filter(n=>n&&inData.has(n))
+    : [...inData].sort();
+  lS.innerHTML='<option value="">All</option>'+lifes.map(v=>`<option value="${v}">${v}</option>`).join('');
+  if(lifes.includes(cl))lS.value=cl; else {lS.value='';filterLife='';}
   populateStatusDropdown();
 }
 function onSearch(val){
@@ -897,11 +927,13 @@ function clearSearch(){
   renderStats(); renderList(); updatePins();
 }
 function clearFilters(){
-  activeCategory=null; filterDamage=''; filterRoad=''; filterPM=''; filterPriority=''; filterStatus=''; activeStage=''; filterHasDamage=true; filterSearch='';
+  activeCategory=null; filterDamage=''; filterRoad=''; filterPM=''; filterPriority=''; filterArea=''; filterLife=''; filterStatus=''; activeStage=''; filterHasDamage=true; filterSearch='';
   document.getElementById('filterDamage').value='';
   document.getElementById('filterRoad').value='';
   document.getElementById('filterPM').value='';
   document.getElementById('filterPriority').value='';
+  document.getElementById('filterArea').value='';
+  document.getElementById('filterLife').value='';
   document.getElementById('filterCategory').value='';
   document.getElementById('filterStage').value='';
   document.getElementById('filterStatus').value='';
@@ -981,9 +1013,11 @@ function getFiltered(){
     if(filterRoad&&r.roadName!==filterRoad)return false;
     if(filterPM&&r.pm!==filterPM)return false;
     if(filterPriority&&r.priority!==filterPriority)return false;
+    if(filterArea&&r.depot!==filterArea)return false;
+    if(filterLife&&r.life!==filterLife)return false;
     if(filterStatus&&r[activeStage]!==filterStatus)return false;
     if(q){
-      const fields=[r.damageNumber,r.roadName,r.location,r.pm,r.category,r.priority,r.status,r.damageDetails,r.roadType,r.depot,r.eventNo];
+      const fields=[r.damageNumber,r.roadName,r.location,r.pm,r.category,r.priority,r.status,r.damageDetails,r.roadType,r.depot,r.life,r.eventNo];
       if(!fields.some(v=>(v||'').toLowerCase().includes(q)))return false;
     }
     return true;
@@ -1063,8 +1097,10 @@ function renderList(){
     if(filterRoad&&r.roadName!==filterRoad)return false;
     if(filterPM&&r.pm!==filterPM)return false;
     if(filterPriority&&r.priority!==filterPriority)return false;
+    if(filterArea&&r.depot!==filterArea)return false;
+    if(filterLife&&r.life!==filterLife)return false;
     if(filterStatus&&r[activeStage]!==filterStatus)return false;
-    if(q){const fields=[r.damageNumber,r.roadName,r.location,r.pm,r.category,r.priority,r.status,r.damageDetails,r.roadType,r.depot,r.eventNo];if(!fields.some(v=>(v||'').toLowerCase().includes(q)))return false;}
+    if(q){const fields=[r.damageNumber,r.roadName,r.location,r.pm,r.category,r.priority,r.status,r.damageDetails,r.roadType,r.depot,r.life,r.eventNo];if(!fields.some(v=>(v||'').toLowerCase().includes(q)))return false;}
     return true;
   }).length;
   const noGps=totalFiltered-vis.length;
@@ -1325,7 +1361,7 @@ function fitAll(){
     const zLng=Math.log2(visibleW*360/(dlng*256*2));
     const zLat=Math.log2(mapH*170/(dlat*256*2));
     let zoom=Math.floor(Math.min(zLng,zLat));
-    const isFiltered=!!(activeCategory||filterDamage||filterRoad||filterPM||filterPriority||filterStatus||filterSearch);
+    const isFiltered=!!(activeCategory||filterDamage||filterRoad||filterPM||filterPriority||filterArea||filterLife||filterStatus||filterSearch);
     const minZoom=isFiltered?(vis.length===1?14:9):7;
     zoom=Math.min(15,Math.max(minZoom,zoom));
     // Shift center left (in screen space) by half the panel width so pins land in the visible area
@@ -1929,6 +1965,8 @@ document.getElementById('filterDamage').addEventListener('change',function(){fil
 document.getElementById('filterRoad').addEventListener('change',function(){filterRoad=this.value;renderStats();renderList();updatePins();});
 document.getElementById('filterPM').addEventListener('change',function(){filterPM=this.value;renderStats();renderList();updatePins();});
 document.getElementById('filterPriority').addEventListener('change',function(){filterPriority=this.value;renderStats();renderList();updatePins();});
+document.getElementById('filterArea').addEventListener('change',function(){filterArea=this.value;renderStats();renderList();updatePins();});
+document.getElementById('filterLife').addEventListener('change',function(){filterLife=this.value;renderStats();renderList();updatePins();});
 document.getElementById('filterStatus').addEventListener('change',function(){filterStatus=this.value;renderStats();renderList();updatePins();});
 
 // Reload when Power Apps updates the iframe src
