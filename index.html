@@ -100,6 +100,9 @@ body.dark-mode #mapLegend{color:var(--muted);} body.dark-mode #mapLegend b{color
 .list-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.1);border-color:#c7d2fe}
 .list-card.active{border-color:#6366F1;box-shadow:0 0 0 2px rgba(99,102,241,.15)}
 .card-top{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.card-cam{flex:0 0 auto;width:34px;height:28px;display:flex;align-items:center;justify-content:center;border:1.5px dashed #CBD5E1;border-radius:7px;background:#fff;color:#374151;cursor:pointer;padding:0;transition:border-color .15s,color .15s,background .15s;}
+.card-cam:hover{border-color:#2563EB;color:#2563EB;background:#EFF6FF;}
+body.dark-mode .card-cam{background:transparent;color:var(--text);border-color:var(--rim2);}
 .card-arrow{position:absolute;top:50%;right:10px;transform:translateY(-50%);width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#cbd5e1;flex-shrink:0;}
 .card-dmgno{font-family:'Segoe UI',sans-serif;font-size:12px;font-weight:600;color:#111827;}
 .card-details{font-family:'Segoe UI',sans-serif;font-size:12px;font-weight:600;color:#111827;margin-bottom:3px;line-height:1.4;}
@@ -149,9 +152,6 @@ body.pane-collapsed #paneToggle .arrow{transform:rotate(180deg)}
 #dp-header{padding:14px 16px 10px;border-bottom:1px solid var(--rim);flex-shrink:0;}
 #dp-close{position:absolute;top:10px;right:12px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(0,0,0,.05);border:none;cursor:pointer;font-size:14px;color:#6b7280;z-index:1;}
 #dp-close:hover{background:rgba(0,0,0,.1);color:var(--text);}
-#dp-view-images-btn{position:absolute;top:10px;right:44px;height:26px;padding:0 10px;display:flex;align-items:center;gap:5px;border-radius:6px;background:#2563EB;border:1.5px solid #2563EB;cursor:pointer;font-size:11px;font-weight:600;color:#fff;z-index:1;white-space:nowrap;transition:all .15s;font-family:'Segoe UI',sans-serif;}
-#dp-view-images-btn:hover{background:#1d4ed8;border-color:#1d4ed8;}
-#dp-view-images-btn svg{flex-shrink:0;}
 #dp-ref{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;}
 #dp-status-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:3px 9px;border-radius:5px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;}
 .dp-tabs{display:flex;border-bottom:1px solid var(--rim);flex-shrink:0;}
@@ -270,7 +270,6 @@ body.dark-mode #detailPanel{ background-color:var(--surface); border-color:var(-
 body.dark-mode #dp-header{ border-color:var(--rim); }
 body.dark-mode #dp-ref{ color:var(--text); background:transparent; }
 body.dark-mode #dp-close{ color:var(--muted); background:rgba(255,255,255,.06); }
-body.dark-mode #dp-view-images-btn{ background:#2563EB; border-color:#2563EB; color:#fff; }
 body.dark-mode .dp-tabs{ border-color:var(--rim); }
 body.dark-mode .dp-tab{ color:var(--muted); }
 body.dark-mode .dp-tab.active{ color:var(--text); }
@@ -483,10 +482,6 @@ body.dark-mode .dp-edit-textarea{ background-color:var(--surface2); color:var(--
   <!-- Right detail panel — outside mapArea so overflow:hidden doesn't clip it -->
   <div id="detailPanel">
       <button id="dp-close" onclick="closeFloatPopup()">✕</button>
-      <button id="dp-view-images-btn" onclick="viewImages(_dpRecord&&_dpRecord.damageNumber,_dpRecord&&_dpRecord.parentID)" style="display:none;">
-        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg>
-        Images
-      </button>
       <div id="dp-header">
         <div id="dp-ref">—</div>
         <div id="dp-status-badge"></div>
@@ -1209,6 +1204,7 @@ function renderList(){
         <span class="card-arrow">›</span>
         <div class="card-top">
           <span class="card-dmgno" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.damageNumber||'No Number'}</span>
+          <button class="card-cam" title="Photos" aria-label="Photos for ${r.damageNumber||'this damage'}" onclick="event.stopPropagation();camClick(${gi})"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg></button>
         </div>
         <div style="margin-bottom:5px;"><span style="font-family:'Segoe UI',sans-serif;font-size:10px;font-weight:700;color:${sc.color};background:${sc.bg};padding:2px 8px;border-radius:5px;text-transform:uppercase;display:inline-block;">${sc.label}</span></div>
         <div class="card-details">${r.location||'—'}</div>
@@ -1567,18 +1563,12 @@ function showFloatPopup(r){
   if(footer) footer.style.display='flex';
   renderDpTab();
   document.getElementById('detailPanel').classList.add('open');
-  // Show view images button
-  const vib=document.getElementById('dp-view-images-btn');
-  if(vib) vib.style.display='flex';
 }
 function closeFloatPopup(){
   document.getElementById('detailPanel').classList.remove('open');
   document.querySelectorAll('.list-card').forEach(el=>el.classList.remove('active'));
   highlightPin(null);
   _dpRecord=null;
-  // Hide view images button
-  const vib=document.getElementById('dp-view-images-btn');
-  if(vib) vib.style.display='none';
 }
 function switchDpTab(tab,btn){
   _dpTab=tab;
@@ -1946,6 +1936,8 @@ function addAttachment(damageNumber){
 let _galleryImages=[];
 let _lightboxIdx=0;
 
+// v86: the camera button on a list card opens that damage's photos (the Images button left the right panel)
+function camClick(gi){const r=records[gi];if(r)viewImages(r.damageNumber,r.parentID);}
 function viewImages(damageNumber, parentID){
   postUp({type:'TASK_UPDATED', task:{type:'VIEW_IMAGES', guid:parentID, damageNumber:damageNumber, parentID:parentID}});
 }
