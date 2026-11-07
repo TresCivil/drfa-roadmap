@@ -33,19 +33,29 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
 .stat-value{font-size:23px;font-weight:600;color:#111827;}
 
 /* ── FILTER BAR ── */
-#filterbar{display:flex;flex-direction:column;background:#E5E7EB;border-bottom:1px solid var(--rim2);z-index:9;}
-#filterbar-filters{display:flex;align-items:flex-end;gap:6px;padding:5px 12px 16px;overflow-x:auto;flex-wrap:nowrap;width:100%;}
+#filterbar{display:flex;flex-direction:column;background:#F8FAFC;border-bottom:1px solid var(--rim2);z-index:9;}
+#filterbar-filters{display:flex;flex-direction:column;gap:10px;padding:10px 16px 10px;width:100%;}
+.fb-row{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;width:100%;}
+.fb-row .fb-group{flex:0 1 170px;min-width:120px;}
+.fb-row .fb-group.fb-wide{flex:1 1 220px;}
+#mapLegend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:12px;color:#4B5563;}
+#mapLegend b{color:#111827;}
+#mapLegend .lg{display:inline-flex;align-items:center;gap:6px;}
+#mapLegend .lg i{display:inline-block;width:10px;height:10px;border-radius:50%;}
+#mapLegend .lg i.sq{border-radius:2px;width:14px;height:14px;opacity:.7;}
+#mapLegend .shown{color:#6B7280;}
+body.dark-mode #mapLegend{color:var(--muted);} body.dark-mode #mapLegend b{color:var(--text);}
 #filterbar-filters::-webkit-scrollbar{height:3px;}
 #filterbar-filters::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:2px;}
 .fb-group{display:flex;flex-direction:column;gap:2px;flex-shrink:0;flex:1 1 0;min-width:0;}
-.fb-group-label{font-size:10px;font-weight:600;color:#686C75;white-space:nowrap;letter-spacing:.01em;}
-.fb-select{height:30px;padding:0 22px 0 8px;font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:400;color:#111827;border:1.5px solid #e5e7eb;border-radius:6px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239ca3af'/%3E%3C/svg%3E") no-repeat right 8px center;-webkit-appearance:none;appearance:none;color:#1a1a2e;outline:none;cursor:pointer;transition:border-color .15s;width:100%;min-width:60px;}
+.fb-group-label{font-size:12px;font-weight:500;color:#374151;white-space:nowrap;letter-spacing:.01em;margin-bottom:4px;}
+.fb-select{height:34px;padding:0 26px 0 12px;font-family:'Segoe UI',sans-serif;font-size:12px;font-weight:400;color:#111827;border:1.5px solid #e5e7eb;border-radius:6px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239ca3af'/%3E%3C/svg%3E") no-repeat right 8px center;-webkit-appearance:none;appearance:none;color:#1a1a2e;outline:none;cursor:pointer;transition:border-color .15s;width:100%;min-width:60px;}
 .fb-select:focus{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.1);}
 .fb-select:disabled{opacity:.45;cursor:not-allowed;}
 .fb-select option{background:#fff;color:#111827;}
-#filterbar-search{display:flex;flex-direction:column;gap:3px;flex:0 0 160px;}
+#filterbar-search{display:flex;flex-direction:column;gap:3px;flex:0 1 240px;min-width:180px;}
 #filterbar-search .fb-group-label{font-size:10px;font-weight:600;color:#686C75;}
-#sideSearch{display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #e5e7eb;border-radius:6px;padding:0 10px;height:30px;transition:border-color .15s;min-width:160px;}
+#sideSearch{display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #e5e7eb;border-radius:6px;padding:0 10px;height:34px;transition:border-color .15s;min-width:160px;}
 #sideSearch:focus-within{border-color:#2563EB;box-shadow:0 0 0 2px rgba(37,99,235,.1);}
 #sideSearch svg{flex-shrink:0;color:#9ca3af;order:2;}
 #sideSearchInput{border:none;outline:none;font-family:'Segoe UI',sans-serif;font-size:10px;font-weight:400;color:#111827;background:transparent;width:100%;min-width:0;order:1;}
@@ -354,90 +364,80 @@ body.dark-mode .dp-edit-textarea{ background-color:var(--surface2); color:var(--
 
 <!-- FILTER BAR -->
 <div id="filterbar">
-  <!-- Filters row: label on top of each control -->
+  <!-- v86: filters in the DRFA Manager v9 mock-up order. Row 1: search, record type, area, programme, PM, contractor.
+       Row 2: road, status, priority, stage, show, colour by. Then the legend. -->
   <div id="filterbar-filters">
-    <!-- Search -->
-    <div id="filterbar-search">
-      <div class="fb-group-label">Search records</div>
-      <div id="sideSearch">
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M9 9l2.5 2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-        <input id="sideSearchInput" type="text" placeholder="Search…" oninput="onSearch(this.value)" />
-        <button id="sideSearchClear" onclick="clearSearch()" title="Clear">✕</button>
+    <div class="fb-row">
+      <div id="filterbar-search">
+        <div class="fb-group-label">&nbsp;</div>
+        <div id="sideSearch">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M9 9l2.5 2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <input id="sideSearchInput" type="text" placeholder="Search records" oninput="onSearch(this.value)" />
+          <button id="sideSearchClear" onclick="clearSearch()" title="Clear">✕</button>
+        </div>
+      </div>
+      <div class="fb-group">
+        <div class="fb-group-label">Record type</div>
+        <select class="fb-select" id="filterCategory" onchange="setCatFromDropdown(this.value)"><option value="">All types</option></select>
+      </div>
+      <div class="fb-group">
+        <div class="fb-group-label">Area</div>
+        <select class="fb-select" id="filterArea"><option value="">All areas</option></select>
+      </div>
+      <div class="fb-group">
+        <div class="fb-group-label">Programme</div>
+        <select class="fb-select" id="filterProg"><option value="">All programmes</option></select>
+      </div>
+      <div class="fb-group">
+        <div class="fb-group-label">Project manager</div>
+        <select class="fb-select" id="filterPM"><option value="">All PMs</option></select>
+      </div>
+      <div class="fb-group fb-wide">
+        <div class="fb-group-label">Contractor / team</div>
+        <select class="fb-select" id="filterTeam"><option value="">All</option></select>
       </div>
     </div>
-
-
-    <!-- Category -->
-    <div class="fb-group">
-      <div class="fb-group-label">Category</div>
-      <select class="fb-select" id="filterCategory" onchange="setCatFromDropdown(this.value)">
-        <option value="">All</option>
-      </select>
+    <div class="fb-row">
+      <div class="fb-group">
+        <div class="fb-group-label">Road / asset</div>
+        <select class="fb-select" id="filterRoad"><option value="">All roads</option></select>
+      </div>
+      <div class="fb-group">
+        <div class="fb-group-label">Status</div>
+        <select class="fb-select" id="filterOverall"><option value="">All statuses</option><option>Open</option><option>Overdue</option><option>Completed</option></select>
+      </div>
+      <div class="fb-group">
+        <div class="fb-group-label">Priority</div>
+        <select class="fb-select" id="filterPriority"><option value="">All priorities</option></select>
+      </div>
+      <div class="fb-group">
+        <div class="fb-group-label">Stage</div>
+        <select class="fb-select" id="filterLife"><option value="">All stages</option></select>
+      </div>
+      <div class="fb-group">
+        <div class="fb-group-label">Show</div>
+        <select class="fb-select" id="mapShow"><option value="points">Points</option><option value="clusters">Clusters</option><option value="grid">Grid heat map</option></select>
+      </div>
+      <div class="fb-group" id="grpColourBy">
+        <div class="fb-group-label">Colour by</div>
+        <select class="fb-select" id="colourBy"><option value="type">Record type</option><option value="life">Lifecycle stage</option><option value="claim">Claim status</option></select>
+      </div>
+      <div class="fb-group" id="grpHeatBy" style="display:none">
+        <div class="fb-group-label">Heat by</div>
+        <select class="fb-select" id="heatBy"><option value="count">Number of damages</option></select>
+      </div>
+      <div class="fb-group" style="flex:0 0 auto;">
+        <div class="fb-group-label">&nbsp;</div>
+        <button class="clear-btn" onclick="clearFilters()" style="height:34px;border-radius:8px;padding:0 12px;font-size:12px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 11a9 9 0 1 0 2.2-5.9"/><path d="M3 4v5h5"/></svg> Reset filters</button>
+      </div>
     </div>
-
-    <!-- Damage No. -->
-    <div class="fb-group">
-      <div class="fb-group-label">Damage No.</div>
-      <select class="fb-select" id="filterDamage"><option value="">All</option></select>
+    <div id="mapLegend"></div>
+    <!-- Kept for the edit form and older code paths; not shown in the v9 layout -->
+    <div style="display:none">
+      <select id="filterDamage"><option value="">All</option></select>
+      <select id="filterStage" onchange="setStage(this.value)"><option value="">All Stages</option></select>
+      <select id="filterStatus"><option value="">All</option></select>
     </div>
-
-    <!-- Road -->
-    <div class="fb-group">
-      <div class="fb-group-label">Road / Asset</div>
-      <select class="fb-select" id="filterRoad"><option value="">All</option></select>
-    </div>
-
-    <!-- PM -->
-    <div class="fb-group">
-      <div class="fb-group-label">PM</div>
-      <select class="fb-select" id="filterPM"><option value="">All</option></select>
-    </div>
-
-    <!-- Priority -->
-    <div class="fb-group">
-      <div class="fb-group-label">Priority</div>
-      <select class="fb-select" id="filterPriority"><option value="">All</option></select>
-    </div>
-
-    <!-- Area (v86): depot of the damage's road asset, sent by Power Apps as "area" -->
-    <div class="fb-group">
-      <div class="fb-group-label">Area</div>
-      <select class="fb-select" id="filterArea"><option value="">All</option></select>
-    </div>
-
-    <!-- Lifecycle stage (v86): the stage the record stepper shows, sent by Power Apps as "life" -->
-    <div class="fb-group">
-      <div class="fb-group-label">Lifecycle stage</div>
-      <select class="fb-select" id="filterLife"><option value="">All</option></select>
-    </div>
-
-    <div class="fb-sep"></div>
-
-    <!-- Stage -->
-    <div class="fb-group">
-      <div class="fb-group-label">Stage</div>
-      <select class="fb-select" id="filterStage" onchange="setStage(this.value)">
-        <option value="">All Stages</option>
-      </select>
-    </div>
-
-    <!-- Status -->
-    <div class="fb-group">
-      <div class="fb-group-label">Status</div>
-      <select class="fb-select" id="filterStatus"><option value="">All</option></select>
-    </div>
-
-    <div class="fb-sep"></div>
-
-    <!-- Clear button aligned with filters -->
-    <div class="fb-group" style="flex:0 0 auto;">
-      <div class="fb-group-label">&nbsp;</div>
-      <button class="clear-btn" onclick="clearFilters()" style="height:30px;border-radius:6px;padding:0 12px;font-size:11px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 11a9 9 0 1 0 2.2-5.9"/><path d="M3 4v5h5"/></svg> Reset filters</button>
-    </div>
-
-
-
-
   </div>
 </div>
 
@@ -666,6 +666,8 @@ function normalise(raw){
     pm:           g('PM','cr8fb_PM','pm')                                                        || '',
     depot:        g('Depot','depot','area')                                                       || '',
     life:         g('Lifecycle_Stage','lifecycleStage','life')                                    || '',
+    programme:    g('Programme','programme')                                                     || '',
+    claimStatus:  g('Claim_Status','claimStatus')                                                 || '',
     priority:       g('Priority','priority')                                                        || '',
     status:         g('Construction_Status','constructionStatus','status')                          || '',
     scopeStatus:    g('Scope_Status','scopeStatus')                                                 || '',
@@ -689,8 +691,69 @@ const STAGES=[
   {key:'status',         label:'Construction'},
 ];
 
+/* ── v86: overall status, colour by and legend ── */
+// Status filter = the same rules as the Open + In Progress / Overdue / Completed tiles
+const OPEN_ST=['Not Started','In Progress'];
+const isCompleted=r=>r.status==='Completed'||r.status==='Complete - No Work Required';
+const isOverdue=r=>{if(isCompleted(r)||!r.constructionEnd)return false;const e=new Date(r.constructionEnd);return !isNaN(e)&&e<new Date();};
+function overallMatch(r,v){
+  if(!v)return true;
+  if(v==='Open')return OPEN_ST.includes(r.status);
+  if(v==='Overdue')return isOverdue(r);
+  if(v==='Completed')return isCompleted(r);
+  return true;
+}
+// Claim status groups (same as the mock-up)
+function claimGroup(cs){
+  const v=(cs||'').trim().toLowerCase();
+  if(['paid','approved'].includes(v))return 'Paid or approved';
+  if(['submitted','under assessment','submitting'].includes(v))return 'With RA';
+  if(['draft','qa review'].includes(v))return 'In preparation';
+  if(['returned','submission failed'].includes(v))return 'Returned or failed';
+  return 'Not assigned';
+}
+const CLAIM_C={'Paid or approved':'#17B751','With RA':'#7125EB','In preparation':'#F59E0B','Returned or failed':'#F13B1B','Not assigned':'#9CA3AF'};
+// Lifecycle stage colours (EW and IRW stage names; grey when the damage has no stage)
+const LIFE_C2={'Identified':'#9CA3AF','Picked up':'#9CA3AF','Scoped & estimated':'#93C5FD','Submitted for RA approval':'#60A5FA','Scope approved':'#3B82F6',
+  'Works in progress':'#F59E0B','Works complete':'#10B981','On a claim':'#A78BFA','Submitted':'#7125EB','Approved':'#2563EB','Paid':'#17B751','Closed':'#118E3F',
+  'No works required':'#6B7280'};
+const NO_STAGE='No stage';
+// Record types in the mock-up order (EW, IRW, EPAR), then any others
+const TYPE_ORDER=()=>[...['EW','IRW','EPAR'].filter(k=>CAT_KEYS.includes(k)),...CAT_KEYS.filter(k=>!['EW','IRW','EPAR'].includes(k))];
+function colourOf(r){
+  if(colourBy==='life')return LIFE_C2[r.life]||'#D1D5DB';
+  if(colourBy==='claim')return CLAIM_C[claimGroup(r.claimStatus)];
+  return cc(r.category);
+}
+function legendKeys(vis){
+  if(colourBy==='life'){
+    const inData=new Set(vis.map(r=>r.life||NO_STAGE));
+    const order=lifeOptions.length?lifeOptions.map(o=>o.Name):Object.keys(LIFE_C2);
+    const keys=order.filter(n=>inData.has(n));
+    [...inData].forEach(n=>{if(!keys.includes(n))keys.push(n);});
+    return keys.map(k=>[k,k===NO_STAGE?'#D1D5DB':(LIFE_C2[k]||'#D1D5DB')]);
+  }
+  if(colourBy==='claim')return Object.entries(CLAIM_C);
+  return TYPE_ORDER().map(k=>[k==='EPAR'?'EPAR / REPA':k,cc(k)]);
+}
+const heatCol=t=>t>.75?'#B91C1C':t>.5?'#F13B1B':t>.25?'#F97316':t>.1?'#F59E0B':'#FDE68A';
+function renderLegend(vis,extra){
+  const el=document.getElementById('mapLegend'); if(!el)return;
+  let h='<b>Legend</b>';
+  if(mapShow==='grid'){
+    const mx=(extra&&extra.max)||1;
+    h+='<span>Each square is about 3 km. Colour shows the number of damages, see-through so the map shows underneath.</span>';
+    h+=[.05,.2,.4,.6,.9].map(t=>`<span class="lg"><i class="sq" style="background:${heatCol(t)}"></i>${Math.max(1,Math.round(mx*t))}</span>`).join('');
+  } else {
+    if(mapShow==='clusters')h+='<span>Bubbles group nearby damages and split as you zoom in. Click a bubble to zoom in.</span>';
+    h+=legendKeys(vis).map(([k,c])=>`<span class="lg"><i style="background:${c}"></i>${k}</span>`).join('');
+  }
+  h+=`<span class="shown">${vis.length.toLocaleString()} shown</span>`;
+  el.innerHTML=h;
+}
+
 /* ── STATE ── */
-let records=[], allRecords=[], activeEvent='EN0001', activeCategory=null, filterDamage='', filterRoad='', filterPM='', filterPriority='', filterArea='', filterLife='', filterStatus='', filterHasDamage=true, filterSearch='', activeStage='status';
+let records=[], allRecords=[], activeEvent='EN0001', activeCategory=null, filterDamage='', filterRoad='', filterPM='', filterPriority='', filterArea='', filterLife='', filterProg='', filterTeam='', filterOverall='', mapShow='points', colourBy='type', filterStatus='', filterHasDamage=true, filterSearch='', activeStage='status';
 let azMap=null, popup=null, markers=[], selectedMarker=null;
 
 function highlightPin(marker){
@@ -814,9 +877,9 @@ function renderStats(){
 function buildCatChips(){
   const sel=document.getElementById('filterCategory');
   if(!sel)return;
-  sel.innerHTML=`<option value="">All Categories</option>`+
-    CAT_KEYS.map(cat=>
-      `<option value="${cat}"${activeCategory===cat?' selected':''}>${(CAT_CFG[cat]||{label:cat}).label}</option>`
+  sel.innerHTML=`<option value="">All types</option>`+
+    TYPE_ORDER().map(cat=>
+      `<option value="${cat}"${activeCategory===cat?' selected':''}>${cat==='EPAR'?'EPAR / REPA':cat}</option>`
     ).join('');
 }
 function setCatFromDropdown(cat){
@@ -877,19 +940,19 @@ function populateDropdowns(){
   const cd=dS.value, cr=rS.value, cp=pS.value, cpr=prS.value;
 
   dS.innerHTML='<option value="">All</option>'+damages.map(v=>`<option value="${v}">${v}</option>`).join('');
-  rS.innerHTML='<option value="">All</option>'+roads.map(v=>`<option value="${v}">${v}</option>`).join('');
+  rS.innerHTML='<option value="">All roads</option>'+roads.map(v=>`<option value="${v}">${v}</option>`).join('');
 
   // PM — use Dropdown Options table if available, else derive from data
   const pms=pmOptions.length
     ? pmOptions.map(o=>o.Name).filter(Boolean)
     : [...new Set(base.map(r=>r.pm).filter(Boolean))].sort();
-  pS.innerHTML='<option value="">All</option>'+pms.map(v=>`<option value="${v}">${v}</option>`).join('');
+  pS.innerHTML='<option value="">All PMs</option>'+pms.map(v=>`<option value="${v}">${v}</option>`).join('');
 
   // Priority — use Dropdown Options table if available, else derive from data
   const priorities=priorityOptions.length
     ? priorityOptions.map(o=>o.Name).filter(Boolean)
     : [...new Set(base.map(r=>r.priority).filter(Boolean))].sort();
-  prS.innerHTML='<option value="">All</option>'+priorities.map(v=>`<option value="${v}">${v}</option>`).join('');
+  prS.innerHTML='<option value="">All priorities</option>'+priorities.map(v=>`<option value="${v}">${v}</option>`).join('');
 
   if(damages.includes(cd))dS.value=cd;
   if(roads.includes(cr))rS.value=cr;
@@ -899,7 +962,7 @@ function populateDropdowns(){
   // Area (v86): areas in the data, A-Z
   const aS=document.getElementById('filterArea'), ca=aS.value;
   const areas=[...new Set(base.map(r=>r.depot).filter(Boolean))].sort();
-  aS.innerHTML='<option value="">All</option>'+areas.map(v=>`<option value="${v}">${v}</option>`).join('');
+  aS.innerHTML='<option value="">All areas</option>'+areas.map(v=>`<option value="${v}">${v}</option>`).join('');
   if(areas.includes(ca))aS.value=ca; else {aS.value='';filterArea='';}
 
   // Lifecycle stage (v86): lifecycle order from Power Apps (lifeOptions), else the stages in the data A-Z
@@ -908,8 +971,13 @@ function populateDropdowns(){
   const lifes=lifeOptions.length
     ? lifeOptions.map(o=>o.Name).filter(n=>n&&inData.has(n))
     : [...inData].sort();
-  lS.innerHTML='<option value="">All</option>'+lifes.map(v=>`<option value="${v}">${v}</option>`).join('');
+  lS.innerHTML='<option value="">All stages</option>'+lifes.map(v=>`<option value="${v}">${v}</option>`).join('');
   if(lifes.includes(cl))lS.value=cl; else {lS.value='';filterLife='';}
+
+  // Programme and Contractor / team (v86): values in the data, A-Z
+  const fill=(id,ph,vals,cur,reset)=>{const el=document.getElementById(id);el.innerHTML=`<option value="">${ph}</option>`+vals.map(v=>`<option value="${v}">${v}</option>`).join('');if(vals.includes(cur))el.value=cur;else{el.value='';reset();}};
+  fill('filterProg','All programmes',[...new Set(base.map(r=>r.programme).filter(Boolean))].sort(),filterProg,()=>{filterProg='';});
+  fill('filterTeam','All',[...new Set(base.map(r=>r.constructionTeam).filter(Boolean))].sort(),filterTeam,()=>{filterTeam='';});
   populateStatusDropdown();
 }
 function onSearch(val){
@@ -927,13 +995,16 @@ function clearSearch(){
   renderStats(); renderList(); updatePins();
 }
 function clearFilters(){
-  activeCategory=null; filterDamage=''; filterRoad=''; filterPM=''; filterPriority=''; filterArea=''; filterLife=''; filterStatus=''; activeStage=''; filterHasDamage=true; filterSearch='';
+  activeCategory=null; filterDamage=''; filterRoad=''; filterPM=''; filterPriority=''; filterArea=''; filterLife=''; filterProg=''; filterTeam=''; filterOverall=''; filterStatus=''; activeStage='status'; filterHasDamage=true; filterSearch='';
   document.getElementById('filterDamage').value='';
   document.getElementById('filterRoad').value='';
   document.getElementById('filterPM').value='';
   document.getElementById('filterPriority').value='';
   document.getElementById('filterArea').value='';
   document.getElementById('filterLife').value='';
+  document.getElementById('filterProg').value='';
+  document.getElementById('filterTeam').value='';
+  document.getElementById('filterOverall').value='';
   document.getElementById('filterCategory').value='';
   document.getElementById('filterStage').value='';
   document.getElementById('filterStatus').value='';
@@ -1015,6 +1086,9 @@ function getFiltered(){
     if(filterPriority&&r.priority!==filterPriority)return false;
     if(filterArea&&r.depot!==filterArea)return false;
     if(filterLife&&r.life!==filterLife)return false;
+    if(filterProg&&r.programme!==filterProg)return false;
+    if(filterTeam&&r.constructionTeam!==filterTeam)return false;
+    if(filterOverall&&!overallMatch(r,filterOverall))return false;
     if(filterStatus&&r[activeStage]!==filterStatus)return false;
     if(q){
       const fields=[r.damageNumber,r.roadName,r.location,r.pm,r.category,r.priority,r.status,r.damageDetails,r.roadType,r.depot,r.life,r.eventNo];
@@ -1099,6 +1173,9 @@ function renderList(){
     if(filterPriority&&r.priority!==filterPriority)return false;
     if(filterArea&&r.depot!==filterArea)return false;
     if(filterLife&&r.life!==filterLife)return false;
+    if(filterProg&&r.programme!==filterProg)return false;
+    if(filterTeam&&r.constructionTeam!==filterTeam)return false;
+    if(filterOverall&&!overallMatch(r,filterOverall))return false;
     if(filterStatus&&r[activeStage]!==filterStatus)return false;
     if(q){const fields=[r.damageNumber,r.roadName,r.location,r.pm,r.category,r.priority,r.status,r.damageDetails,r.roadType,r.depot,r.life,r.eventNo];if(!fields.some(v=>(v||'').toLowerCase().includes(q)))return false;}
     return true;
@@ -1296,44 +1373,93 @@ function initMap(){
   });
 }
 
-/* ── UPDATE PINS — batched via rAF to avoid blocking ── */
-let _pinTimer=null;
+/* ── UPDATE PINS — batched via rAF to avoid blocking ──
+   v86: Show = Points (pins coloured by "Colour by"), Clusters (bubbles that split as you zoom in) or Grid heat map (about 3 km squares). */
+let _pinTimer=null, _gridSrc=null, _gridLayer=null, _gridPopup=null, _zoomHooked=false;
+function clearMapLayers(){
+  markers.forEach(m=>azMap.markers.remove(m.marker||m));
+  markers=[];
+  if(_gridLayer){azMap.layers.remove(_gridLayer);_gridLayer=null;}
+  if(_gridSrc){azMap.sources.remove(_gridSrc);_gridSrc=null;}
+  if(_gridPopup){_gridPopup.close();}
+}
+function addPin(r){
+  const rec=r;
+  const col=colourOf(r);
+  const htmlStr=`<div style="cursor:pointer;display:block;">
+    <div class="pin-inner" style="display:block;transition:filter .15s;">${pinSvg(col,rec.category)}</div>
+  </div>`;
+  const marker=new atlas.HtmlMarker({htmlContent:htmlStr,position:[r.lng,r.lat],anchor:'bottom'});
+  azMap.markers.add(marker);
+  markers.push({marker,record:rec});
+  azMap.events.add('click',marker,()=>{
+    highlightPin(marker);
+    showFloatPopup(rec);
+    highlightList(rec);
+    postUp({type:'PIN_CLICK',damageNumber:rec.damageNumber,category:rec.category,eventNo:rec.eventNo,lat:rec.lat,lng:rec.lng});
+  });
+  azMap.events.add('mouseenter',marker,()=>{
+    const el=marker.getElement();if(el){const inner=el.querySelector('.pin-inner');if(inner)inner.style.filter='brightness(1.2)';}
+  });
+  azMap.events.add('mouseleave',marker,()=>{
+    const el=marker.getElement();if(el){const inner=el.querySelector('.pin-inner');if(inner)inner.style.filter='';}
+  });
+}
+// Group records into lat/lng cells (cell height = size degrees, width = size*1.2)
+function gridCells(rows,size){
+  const g={};
+  rows.forEach(r=>{const i=Math.floor(r.lat/size),j=Math.floor(r.lng/(size*1.2));const k=i+'|'+j;(g[k]=g[k]||{i,j,rs:[]}).rs.push(r);});
+  return Object.values(g).map(c=>({...c,s:c.i*size,n:(c.i+1)*size,w:c.j*size*1.2,e:(c.j+1)*size*1.2,
+    lat:c.rs.reduce((a,r)=>a+r.lat,0)/c.rs.length,lng:c.rs.reduce((a,r)=>a+r.lng,0)/c.rs.length}));
+}
+function drawClusters(vis){
+  const z=azMap.getCamera().zoom||7;
+  const sz=Math.max(.003,.5/Math.pow(2,z-7));
+  gridCells(vis,sz).forEach(c=>{
+    if(c.rs.length===1){addPin(c.rs[0]);return;}
+    const n=c.rs.length,d=26+Math.round(Math.sqrt(n)*6);
+    const m=new atlas.HtmlMarker({position:[c.lng,c.lat],anchor:'center',
+      htmlContent:`<div title="${n} damages · click to zoom in" style="width:${d}px;height:${d}px;border-radius:50%;background:rgba(37,99,235,.85);border:2px solid #fff;color:#fff;font:700 12px 'Segoe UI',sans-serif;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer">${n}</div>`});
+    azMap.markers.add(m);
+    markers.push({marker:m,record:null});
+    azMap.events.add('click',m,()=>{azMap.setCamera({center:[c.lng,c.lat],zoom:Math.min(16,z+2),type:'ease',duration:400});});
+  });
+}
+function drawGrid(vis){
+  const cells=gridCells(vis,.027);
+  const mx=Math.max(1,...cells.map(c=>c.rs.length));
+  _gridSrc=new atlas.source.DataSource();
+  azMap.sources.add(_gridSrc);
+  _gridSrc.add(cells.map(c=>new atlas.data.Feature(new atlas.data.Polygon([[[c.w,c.s],[c.e,c.s],[c.e,c.n],[c.w,c.n],[c.w,c.s]]]),
+    {fill:heatCol(c.rs.length/mx),n:c.rs.length,roads:[...new Set(c.rs.map(r=>r.roadName).filter(Boolean))].slice(0,3).join(', ')})));
+  _gridLayer=new atlas.layer.PolygonLayer(_gridSrc,null,{fillColor:['get','fill'],fillOpacity:.55});
+  azMap.layers.add(_gridLayer);
+  if(!_gridPopup)_gridPopup=new atlas.Popup({closeButton:false,pixelOffset:[0,-4]});
+  azMap.events.add('mousemove',_gridLayer,e=>{
+    const f=e.shapes&&e.shapes[0];if(!f)return;const pr=f.getProperties();
+    _gridPopup.setOptions({position:e.position,content:`<div style="padding:6px 10px;font:12px 'Segoe UI',sans-serif">${pr.n} damage${pr.n===1?'':'s'}${pr.roads?'<br><span style="color:#6B7280">'+pr.roads+'</span>':''}</div>`});
+    _gridPopup.open(azMap);
+  });
+  azMap.events.add('mouseleave',_gridLayer,()=>_gridPopup.close());
+  return {max:mx};
+}
 function updatePins(){
-  if(!azMap)return;
+  if(!azMap){renderLegend(getFiltered());return;}
+  if(!_zoomHooked){_zoomHooked=true;azMap.events.add('zoomend',()=>{if(mapShow==='clusters')updatePins();});}
   // Debounce rapid calls
   if(_pinTimer)clearTimeout(_pinTimer);
   _pinTimer=setTimeout(()=>{
     showLoader('Updating pins…');
-    markers.forEach(m=>azMap.markers.remove(m.marker||m));
-    markers=[];
+    clearMapLayers();
     const vis=getFiltered();
-    // Add in batches of 20 across animation frames
+    if(mapShow==='grid'){const x=drawGrid(vis);renderLegend(vis,x);hideLoader();return;}
+    renderLegend(vis);
+    if(mapShow==='clusters'){drawClusters(vis);hideLoader();return;}
+    // Points: add in batches of 20 across animation frames
     const BATCH=20;
     function addBatch(start){
       const end=Math.min(start+BATCH,vis.length);
-      for(let i=start;i<end;i++){
-        const r=vis[i];
-        const rec=r;
-        const col=cc(r.category);
-        const htmlStr=`<div style="cursor:pointer;display:block;">
-          <div class="pin-inner" style="display:block;transition:filter .15s;">${pinSvg(col,rec.category)}</div>
-        </div>`;
-        const marker=new atlas.HtmlMarker({htmlContent:htmlStr,position:[r.lng,r.lat],anchor:'bottom'});
-        azMap.markers.add(marker);
-        markers.push({marker,record:rec});
-        azMap.events.add('click',marker,()=>{
-          highlightPin(marker);
-          showFloatPopup(rec);
-          highlightList(rec);
-          postUp({type:'PIN_CLICK',damageNumber:rec.damageNumber,category:rec.category,eventNo:rec.eventNo,lat:rec.lat,lng:rec.lng});
-        });
-        azMap.events.add('mouseenter',marker,()=>{
-          const el=marker.getElement();if(el){const inner=el.querySelector('.pin-inner');if(inner)inner.style.filter='brightness(1.2)';}
-        });
-        azMap.events.add('mouseleave',marker,()=>{
-          const el=marker.getElement();if(el){const inner=el.querySelector('.pin-inner');if(inner)inner.style.filter='';}
-        });
-      }
+      for(let i=start;i<end;i++)addPin(vis[i]);
       if(end<vis.length){requestAnimationFrame(()=>addBatch(end));}else{hideLoader();}
     }
     addBatch(0);
@@ -1361,7 +1487,7 @@ function fitAll(){
     const zLng=Math.log2(visibleW*360/(dlng*256*2));
     const zLat=Math.log2(mapH*170/(dlat*256*2));
     let zoom=Math.floor(Math.min(zLng,zLat));
-    const isFiltered=!!(activeCategory||filterDamage||filterRoad||filterPM||filterPriority||filterArea||filterLife||filterStatus||filterSearch);
+    const isFiltered=!!(activeCategory||filterDamage||filterRoad||filterPM||filterPriority||filterArea||filterLife||filterProg||filterTeam||filterOverall||filterStatus||filterSearch);
     const minZoom=isFiltered?(vis.length===1?14:9):7;
     zoom=Math.min(15,Math.max(minZoom,zoom));
     // Shift center left (in screen space) by half the panel width so pins land in the visible area
@@ -1967,6 +2093,14 @@ document.getElementById('filterPM').addEventListener('change',function(){filterP
 document.getElementById('filterPriority').addEventListener('change',function(){filterPriority=this.value;renderStats();renderList();updatePins();});
 document.getElementById('filterArea').addEventListener('change',function(){filterArea=this.value;renderStats();renderList();updatePins();});
 document.getElementById('filterLife').addEventListener('change',function(){filterLife=this.value;renderStats();renderList();updatePins();});
+document.getElementById('filterProg').addEventListener('change',function(){filterProg=this.value;renderStats();renderList();updatePins();});
+document.getElementById('filterTeam').addEventListener('change',function(){filterTeam=this.value;renderStats();renderList();updatePins();});
+document.getElementById('filterOverall').addEventListener('change',function(){filterOverall=this.value;renderStats();renderList();updatePins();});
+document.getElementById('colourBy').addEventListener('change',function(){colourBy=this.value;updatePins();});
+document.getElementById('mapShow').addEventListener('change',function(){mapShow=this.value;
+  document.getElementById('grpColourBy').style.display=mapShow==='points'?'':'none';
+  document.getElementById('grpHeatBy').style.display=mapShow==='grid'?'':'none';
+  updatePins();});
 document.getElementById('filterStatus').addEventListener('change',function(){filterStatus=this.value;renderStats();renderList();updatePins();});
 
 // Reload when Power Apps updates the iframe src
