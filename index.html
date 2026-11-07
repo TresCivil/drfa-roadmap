@@ -34,10 +34,12 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
 
 /* ── FILTER BAR ── */
 #filterbar{display:flex;flex-direction:column;background:#F8FAFC;border-bottom:1px solid var(--rim2);z-index:9;}
-#filterbar-filters{display:flex;flex-direction:column;gap:10px;padding:10px 16px 10px;width:100%;}
-.fb-row{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;width:100%;}
-.fb-row .fb-group{flex:0 1 170px;min-width:120px;}
-.fb-row .fb-group.fb-wide{flex:1 1 220px;}
+#filterbar-filters{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));column-gap:12px;row-gap:10px;align-items:end;padding:10px 16px 10px;width:100%;box-sizing:border-box;}
+.fb-row{display:contents;}
+.fb-row .fb-group,#filterbar-search{min-width:0;width:100%;}
+#mapLegend{grid-column:1/-1;}
+@media (max-width:1100px){#filterbar-filters{grid-template-columns:repeat(4,minmax(0,1fr));}}
+@media (max-width:640px){#filterbar-filters{grid-template-columns:repeat(2,minmax(0,1fr));}}
 #mapLegend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:12px;color:#4B5563;}
 #mapLegend b{color:#111827;}
 #mapLegend .lg{display:inline-flex;align-items:center;gap:6px;}
@@ -53,9 +55,9 @@ body.dark-mode #mapLegend{color:var(--muted);} body.dark-mode #mapLegend b{color
 .fb-select:focus{border-color:#6366F1;box-shadow:0 0 0 3px rgba(99,102,241,.1);}
 .fb-select:disabled{opacity:.45;cursor:not-allowed;}
 .fb-select option{background:#fff;color:#111827;}
-#filterbar-search{display:flex;flex-direction:column;gap:3px;flex:0 1 240px;min-width:180px;}
+#filterbar-search{display:flex;flex-direction:column;gap:2px;}
 #filterbar-search .fb-group-label{font-size:10px;font-weight:600;color:#686C75;}
-#sideSearch{display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #e5e7eb;border-radius:6px;padding:0 10px;height:34px;transition:border-color .15s;min-width:160px;}
+#sideSearch{display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #e5e7eb;border-radius:6px;padding:0 10px;height:34px;transition:border-color .15s;min-width:0;}
 #sideSearch:focus-within{border-color:#2563EB;box-shadow:0 0 0 2px rgba(37,99,235,.1);}
 #sideSearch svg{flex-shrink:0;color:#9ca3af;order:2;}
 #sideSearchInput{border:none;outline:none;font-family:'Segoe UI',sans-serif;font-size:10px;font-weight:400;color:#111827;background:transparent;width:100%;min-width:0;order:1;}
@@ -392,12 +394,10 @@ body.dark-mode .dp-edit-textarea{ background-color:var(--surface2); color:var(--
         <div class="fb-group-label">Project manager</div>
         <select class="fb-select" id="filterPM"><option value="">All PMs</option></select>
       </div>
-      <div class="fb-group fb-wide">
+      <div class="fb-group">
         <div class="fb-group-label">Contractor / team</div>
         <select class="fb-select" id="filterTeam"><option value="">All</option></select>
       </div>
-    </div>
-    <div class="fb-row">
       <div class="fb-group">
         <div class="fb-group-label">Road / asset</div>
         <select class="fb-select" id="filterRoad"><option value="">All roads</option></select>
@@ -406,6 +406,8 @@ body.dark-mode .dp-edit-textarea{ background-color:var(--surface2); color:var(--
         <div class="fb-group-label">Status</div>
         <select class="fb-select" id="filterOverall"><option value="">All statuses</option><option>Open</option><option>Overdue</option><option>Completed</option></select>
       </div>
+    </div>
+    <div class="fb-row">
       <div class="fb-group">
         <div class="fb-group-label">Priority</div>
         <select class="fb-select" id="filterPriority"><option value="">All priorities</option></select>
@@ -428,7 +430,7 @@ body.dark-mode .dp-edit-textarea{ background-color:var(--surface2); color:var(--
       </div>
       <div class="fb-group" style="flex:0 0 auto;">
         <div class="fb-group-label">&nbsp;</div>
-        <button class="clear-btn" onclick="clearFilters()" style="height:34px;border-radius:8px;padding:0 12px;font-size:12px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 11a9 9 0 1 0 2.2-5.9"/><path d="M3 4v5h5"/></svg> Reset filters</button>
+        <button class="clear-btn" onclick="clearFilters()" style="height:34px;border-radius:8px;padding:0 14px;font-size:12px;width:auto;align-self:flex-start;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 11a9 9 0 1 0 2.2-5.9"/><path d="M3 4v5h5"/></svg> Reset filters</button>
       </div>
     </div>
     <div id="mapLegend"></div>
