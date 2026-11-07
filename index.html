@@ -669,6 +669,7 @@ const DEMO=[
 /* ── NORMALISE ── maps Power Apps JSON keys to internal fields ── */
 function numOrNull(v){if(v===undefined||v===null||v==='')return null;const n=parseFloat(v);return isNaN(n)?null:n;}
 let eventNames={};
+let nativePanel=false; // true when the app shows the right panel itself (DRFA Manager)
 function normalise(raw){
   function g(...keys){
     for(const k of keys){
@@ -869,6 +870,7 @@ function loadFromHash(){
       rawRecords=p.records;
       statusOptions=(p.statusOptions||[]).sort((a,b)=>(a.SortOrder||0)-(b.SortOrder||0));
       priorityOptions=(p.priorityOptions||[]).sort((a,b)=>(a.SortOrder||0)-(b.SortOrder||0));
+      nativePanel=!!p.nativePanel;
       eventNames={};(p.events||[]).forEach(e=>{if(e&&e.agrn)eventNames[String(e.agrn)]=e.name||'';});
       lifeOptions=(p.lifeOptions||[]).sort((a,b)=>(a.SortOrder||0)-(b.SortOrder||0));
       pmOptions=(p.pmOptions||[]).sort((a,b)=>(a.SortOrder||0)-(b.SortOrder||0));
@@ -1601,6 +1603,8 @@ function showFloatPopup(r){
   _dpRecord=r; _dpTab='details'; stripStart=0; _stripTotal=0;
   // Notify Power Apps of selected record so it can load images
   postUp({type:'TASK_UPDATED', task:{type:'RECORD_SELECTED', guid:r.parentID, damageNumber:r.damageNumber, parentID:r.parentID, category:r.category}});
+  // The app opens its own right panel for this damage, outside the map
+  if(nativePanel)return;
   const col=cc(r.category);
   const sc=STATUS_CFG[r.status]||{bg:'rgba(75,85,99,0.08)',color:'#4B5563',label:(r.status||'—').toUpperCase()};
   document.getElementById('dp-ref').textContent=r.damageNumber||r.roadName||'—';
