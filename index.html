@@ -423,8 +423,8 @@ body.dark-mode .dp-edit-textarea{ background-color:var(--surface2); color:var(--
         <select class="fb-select" id="colourBy"><option value="type">Record type</option><option value="life">Lifecycle stage</option><option value="claim">Claim status</option></select>
       </div>
       <div class="fb-group" id="grpHeatBy" style="display:none">
-        <div class="fb-group-label">Heat by</div>
-        <select class="fb-select" id="heatBy"><option value="count">Number of damages</option></select>
+        <div class="fb-group-label" id="lblHeatBy">Heat by</div>
+        <select class="fb-select" id="heatBy"><option value="erc">Estimated cost</option><option value="spend">Spend to date</option><option value="count">Number of damages</option></select>
       </div>
       <div class="fb-group" style="flex:0 0 auto;">
         <div class="fb-group-label">&nbsp;</div>
@@ -668,6 +668,8 @@ function normalise(raw){
     life:         g('Lifecycle_Stage','lifecycleStage','life')                                    || '',
     programme:    g('Programme','programme')                                                     || '',
     claimStatus:  g('Claim_Status','claimStatus')                                                 || '',
+    erc:          parseFloat(g('erc','estimatedCost')||'') || 0,
+    spend:        parseFloat(g('spend','actual')||'')      || 0,
     priority:       g('Priority','priority')                                                        || '',
     status:         g('Construction_Status','constructionStatus','status')                          || '',
     scopeStatus:    g('Scope_Status','scopeStatus')                                                 || '',
@@ -736,16 +738,24 @@ function legendKeys(vis){
   if(colourBy==='claim')return Object.entries(CLAIM_C);
   return TYPE_ORDER().map(k=>[k==='EPAR'?'EPAR / REPA':k,cc(k)]);
 }
+// Heat by / Cluster by: what each square or bubble adds up
+const HEATM={erc:['Estimated cost',r=>r.erc||0,true],spend:['Spend to date',r=>r.spend||0,true],count:['Number of damages',r=>1,false]};
+const money=v=>v>=1e6?'$'+(v/1e6).toFixed(2)+'M':v>=1e3?'$'+Math.round(v/1e3)+'k':'$'+Math.round(v);
+const metricText=v=>HEATM[heatBy][2]?money(v):Math.round(v).toLocaleString();
 const heatCol=t=>t>.75?'#B91C1C':t>.5?'#F13B1B':t>.25?'#F97316':t>.1?'#F59E0B':'#FDE68A';
 function renderLegend(vis,extra){
   const el=document.getElementById('mapLegend'); if(!el)return;
   let h='<b>Legend</b>';
+  const mlabel=HEATM[heatBy][0].toLowerCase();
+  const empty=extra&&!extra.max?`<span style="color:#B45309">No ${mlabel} is recorded for the damages shown yet.</span>`:'';
   if(mapShow==='grid'){
-    const mx=(extra&&extra.max)||1;
-    h+='<span>Each square is about 3 km. Colour shows the number of damages, see-through so the map shows underneath.</span>';
-    h+=[.05,.2,.4,.6,.9].map(t=>`<span class="lg"><i class="sq" style="background:${heatCol(t)}"></i>${Math.max(1,Math.round(mx*t))}</span>`).join('');
+    const mx=(extra&&extra.max)||0;
+    h+=`<span>Each square is about 3 km. Colour shows ${mlabel}, see-through so the map shows underneath.</span>`;
+    h+=mx?[.05,.2,.4,.6,.9].map(t=>`<span class="lg"><i class="sq" style="background:${heatCol(t)}"></i>${metricText(Math.max(HEATM[heatBy][2]?0:1,mx*t))}</span>`).join(''):empty;
+  } else if(mapShow==='clusters'){
+    h+=`<span>Bubbles group nearby damages and split as you zoom in. Click a bubble to zoom; shift-click lists its damages. Single damages show as pins.${heatBy==='count'?'':' Bubbles show '+mlabel+'.'}</span>`;
+    h+=empty;
   } else {
-    if(mapShow==='clusters')h+='<span>Bubbles group nearby damages and split as you zoom in. Click a bubble to zoom in.</span>';
     h+=legendKeys(vis).map(([k,c])=>`<span class="lg"><i style="background:${c}"></i>${k}</span>`).join('');
   }
   h+=`<span class="shown">${vis.length.toLocaleString()} shown</span>`;
@@ -753,7 +763,7 @@ function renderLegend(vis,extra){
 }
 
 /* ── STATE ── */
-let records=[], allRecords=[], activeEvent='EN0001', activeCategory=null, filterDamage='', filterRoad='', filterPM='', filterPriority='', filterArea='', filterLife='', filterProg='', filterTeam='', filterOverall='', mapShow='points', colourBy='type', filterStatus='', filterHasDamage=true, filterSearch='', activeStage='status';
+let records=[], allRecords=[], activeEvent='EN0001', activeCategory=null, filterDamage='', filterRoad='', filterPM='', filterPriority='', filterArea='', filterLife='', filterProg='', filterTeam='', filterOverall='', mapShow='points', colourBy='type', heatBy='erc', filterStatus='', filterHasDamage=true, filterSearch='', activeStage='status';
 let azMap=null, popup=null, markers=[], selectedMarker=null;
 
 function highlightPin(marker){
@@ -1377,6 +1387,7 @@ function initMap(){
    v86: Show = Points (pins coloured by "Colour by"), Clusters (bubbles that split as you zoom in) or Grid heat map (about 3 km squares). */
 let _pinTimer=null, _gridSrc=null, _gridLayer=null, _gridPopup=null, _zoomHooked=false;
 function clearMapLayers(){
+  if(typeof _listPopup!=='undefined'&&_listPopup)_listPopup.close();
   markers.forEach(m=>azMap.markers.remove(m.marker||m));
   markers=[];
   if(_gridLayer){azMap.layers.remove(_gridLayer);_gridLayer=null;}
@@ -1412,32 +1423,53 @@ function gridCells(rows,size){
   return Object.values(g).map(c=>({...c,s:c.i*size,n:(c.i+1)*size,w:c.j*size*1.2,e:(c.j+1)*size*1.2,
     lat:c.rs.reduce((a,r)=>a+r.lat,0)/c.rs.length,lng:c.rs.reduce((a,r)=>a+r.lng,0)/c.rs.length}));
 }
+let _listPopup=null;
+function listDamages(c){
+  if(!_listPopup)_listPopup=new atlas.Popup({closeButton:true,pixelOffset:[0,-12]});
+  const rs=[...c.rs].sort((a,b)=>(a.damageNumber||'').localeCompare(b.damageNumber||''));
+  const rows=rs.slice(0,25).map(r=>`<div style="padding:3px 0;border-bottom:1px solid #F3F4F6"><b>${r.damageNumber||'(no number)'}</b> <span style="color:${cc(r.category)}">${r.category}</span><br><span style="color:#6B7280">${r.roadName||''}</span></div>`).join('');
+  _listPopup.setOptions({position:[c.lng,c.lat],content:`<div style="padding:8px 12px;font:12px 'Segoe UI',sans-serif;max-height:260px;overflow:auto;min-width:200px"><div style="font-weight:700;margin-bottom:4px">${c.rs.length} damages</div>${rows}${rs.length>25?`<div style="color:#6B7280;padding-top:4px">+ ${rs.length-25} more. Zoom in to see them.</div>`:''}</div>`});
+  _listPopup.open(azMap);
+}
 function drawClusters(vis){
   const z=azMap.getCamera().zoom||7;
   const sz=Math.max(.003,.5/Math.pow(2,z-7));
-  gridCells(vis,sz).forEach(c=>{
+  const fn=HEATM[heatBy][1];
+  const cells=gridCells(vis,sz).map(c=>({...c,v:c.rs.reduce((a,r)=>a+fn(r),0)}));
+  const mx=Math.max(0,...cells.filter(c=>c.rs.length>1).map(c=>c.v));
+  cells.forEach(c=>{
     if(c.rs.length===1){addPin(c.rs[0]);return;}
-    const n=c.rs.length,d=26+Math.round(Math.sqrt(n)*6);
+    const n=c.rs.length;
+    const label=heatBy==='count'?String(n):money(c.v);
+    const d=heatBy==='count'||!mx?26+Math.round(Math.sqrt(n)*6):26+Math.round(Math.sqrt(c.v/mx)*34);
     const m=new atlas.HtmlMarker({position:[c.lng,c.lat],anchor:'center',
-      htmlContent:`<div title="${n} damages · click to zoom in" style="width:${d}px;height:${d}px;border-radius:50%;background:rgba(37,99,235,.85);border:2px solid #fff;color:#fff;font:700 12px 'Segoe UI',sans-serif;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer">${n}</div>`});
+      htmlContent:`<div title="${n} damages${heatBy==='count'?'':' · '+money(c.v)} · click to zoom in, shift-click to list" style="min-width:${d}px;height:${d}px;padding:0 4px;box-sizing:border-box;border-radius:${d}px;background:rgba(37,99,235,.85);border:2px solid #fff;color:#fff;font:700 12px 'Segoe UI',sans-serif;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer">${label}</div>`});
     azMap.markers.add(m);
     markers.push({marker:m,record:null});
-    azMap.events.add('click',m,()=>{azMap.setCamera({center:[c.lng,c.lat],zoom:Math.min(16,z+2),type:'ease',duration:400});});
+    // Native click on the bubble (Azure Maps marker events don't carry the shift key)
+    const bel=m.getElement();
+    if(bel)bel.addEventListener('click',ev=>{
+      ev.stopPropagation();
+      if(ev.shiftKey||z>=15){listDamages(c);return;}
+      azMap.setCamera({center:[c.lng,c.lat],zoom:Math.min(16,z+2),type:'ease',duration:400});
+    });
   });
+  return {max:heatBy==='count'?1:mx};
 }
 function drawGrid(vis){
-  const cells=gridCells(vis,.027);
-  const mx=Math.max(1,...cells.map(c=>c.rs.length));
+  const fn=HEATM[heatBy][1];
+  const cells=gridCells(vis,.027).map(c=>({...c,v:c.rs.reduce((a,r)=>a+fn(r),0)}));
+  const mx=Math.max(0,...cells.map(c=>c.v));
   _gridSrc=new atlas.source.DataSource();
   azMap.sources.add(_gridSrc);
   _gridSrc.add(cells.map(c=>new atlas.data.Feature(new atlas.data.Polygon([[[c.w,c.s],[c.e,c.s],[c.e,c.n],[c.w,c.n],[c.w,c.s]]]),
-    {fill:heatCol(c.rs.length/mx),n:c.rs.length,roads:[...new Set(c.rs.map(r=>r.roadName).filter(Boolean))].slice(0,3).join(', ')})));
+    {fill:heatCol(mx?c.v/mx:0),n:c.rs.length,v:c.v,roads:[...new Set(c.rs.map(r=>r.roadName).filter(Boolean))].slice(0,3).join(', ')})));
   _gridLayer=new atlas.layer.PolygonLayer(_gridSrc,null,{fillColor:['get','fill'],fillOpacity:.55});
   azMap.layers.add(_gridLayer);
   if(!_gridPopup)_gridPopup=new atlas.Popup({closeButton:false,pixelOffset:[0,-4]});
   azMap.events.add('mousemove',_gridLayer,e=>{
     const f=e.shapes&&e.shapes[0];if(!f)return;const pr=f.getProperties();
-    _gridPopup.setOptions({position:e.position,content:`<div style="padding:6px 10px;font:12px 'Segoe UI',sans-serif">${pr.n} damage${pr.n===1?'':'s'}${pr.roads?'<br><span style="color:#6B7280">'+pr.roads+'</span>':''}</div>`});
+    _gridPopup.setOptions({position:e.position,content:`<div style="padding:6px 10px;font:12px 'Segoe UI',sans-serif">${pr.n} damage${pr.n===1?'':'s'}${heatBy==='count'?'':' · '+money(pr.v)}${pr.roads?'<br><span style="color:#6B7280">'+pr.roads+'</span>':''}</div>`});
     _gridPopup.open(azMap);
   });
   azMap.events.add('mouseleave',_gridLayer,()=>_gridPopup.close());
@@ -1453,8 +1485,8 @@ function updatePins(){
     clearMapLayers();
     const vis=getFiltered();
     if(mapShow==='grid'){const x=drawGrid(vis);renderLegend(vis,x);hideLoader();return;}
+    if(mapShow==='clusters'){const x=drawClusters(vis);renderLegend(vis,x);hideLoader();return;}
     renderLegend(vis);
-    if(mapShow==='clusters'){drawClusters(vis);hideLoader();return;}
     // Points: add in batches of 20 across animation frames
     const BATCH=20;
     function addBatch(start){
@@ -2099,8 +2131,11 @@ document.getElementById('filterOverall').addEventListener('change',function(){fi
 document.getElementById('colourBy').addEventListener('change',function(){colourBy=this.value;updatePins();});
 document.getElementById('mapShow').addEventListener('change',function(){mapShow=this.value;
   document.getElementById('grpColourBy').style.display=mapShow==='points'?'':'none';
-  document.getElementById('grpHeatBy').style.display=mapShow==='grid'?'':'none';
+  document.getElementById('grpHeatBy').style.display=mapShow==='points'?'none':'';
+  document.getElementById('lblHeatBy').textContent=mapShow==='clusters'?'Cluster by':'Heat by';
+  if(_listPopup)_listPopup.close();
   updatePins();});
+document.getElementById('heatBy').addEventListener('change',function(){heatBy=this.value;updatePins();});
 document.getElementById('filterStatus').addEventListener('change',function(){filterStatus=this.value;renderStats();renderList();updatePins();});
 
 // Reload when Power Apps updates the iframe src
