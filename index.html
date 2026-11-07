@@ -99,6 +99,8 @@ body.dark-mode #mapLegend{color:var(--muted);} body.dark-mode #mapLegend b{color
 .list-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px}
 .list-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.1);border-color:#c7d2fe}
 .list-card.active{border-color:#6366F1;box-shadow:0 0 0 2px rgba(99,102,241,.15)}
+/* Speed: the browser skips laying out cards that are scrolled out of view */
+.list-card{content-visibility:auto;contain-intrinsic-size:auto 150px;}
 .card-top{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
 .card-cam{flex:0 0 auto;width:34px;height:28px;display:flex;align-items:center;justify-content:center;border:1.5px dashed #CBD5E1;border-radius:7px;background:#fff;color:#374151;cursor:pointer;padding:0;transition:border-color .15s,color .15s,background .15s;}
 .card-cam:hover{border-color:#2563EB;color:#2563EB;background:#EFF6FF;}
@@ -1114,20 +1116,29 @@ const PRIORITY_CFG={
   'Low':      {color:'#14B8A6'},
   'Very Low': {color:'#0E3F2E'},
 };
+// Speed: one shared formatter each (toLocaleDateString builds a new one on every call, ~0.1 ms per card)
+const _fmtD=new Intl.DateTimeFormat('en-AU',{day:'numeric',month:'short',year:'numeric'});
+const _fmtT=new Intl.DateTimeFormat('en-AU',{hour:'2-digit',minute:'2-digit',hour12:true});
+// "dd/mm/yyyy hh:mm:ss" (the app's format) or ISO text -> time in ms (NaN when not a date). Cached per text.
+const _msCache=new Map();
+function dateMs(d){
+  if(!d)return NaN;
+  let v=_msCache.get(d);
+  if(v===undefined){
+    if(typeof d==='string'&&/^\d{1,2}\/\d{1,2}\/\d{4}/.test(d)){
+      const parts=d.split(/[\/ :]/);
+      v=new Date(parts[2],parts[1]-1,parts[0],parts[3]||0,parts[4]||0,parts[5]||0).getTime();
+    } else v=new Date(d).getTime();
+    _msCache.set(d,v);
+  }
+  return v;
+}
 function fmtDate(d){
   if(!d)return'';
   try{
-    let dt;
-    if(typeof d==='string'&&/^\d{1,2}\/\d{1,2}\/\d{4}/.test(d)){
-      const parts=d.split(/[\/ :]/);
-      dt=new Date(parts[2],parts[1]-1,parts[0],parts[3]||0,parts[4]||0,parts[5]||0);
-    } else {
-      dt=new Date(d);
-    }
-    if(isNaN(dt))return d;
-    const date=dt.toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});
-    const time=dt.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit',hour12:true});
-    return date+' '+time;
+    const ms=dateMs(d);
+    if(isNaN(ms))return d;
+    return _fmtD.format(ms)+' '+_fmtT.format(ms);
   }catch(e){return d;}
 }
 function fmtDateOnly(d){
@@ -1218,7 +1229,7 @@ function renderList(){
       if(!a.modifiedOn&&!b.modifiedOn){cmp=0;}
       else if(!a.modifiedOn){cmp=1;}
       else if(!b.modifiedOn){cmp=-1;}
-      else{cmp=new Date(b.modifiedOn)-new Date(a.modifiedOn);}
+      else{cmp=dateMs(b.modifiedOn)-dateMs(a.modifiedOn);}
     }
     return sortAsc?-cmp:cmp;
   });
@@ -1228,7 +1239,7 @@ function renderList(){
     let cmp=0;
     if(sortOrder==='roadName') cmp=a[0].localeCompare(b[0]);
     else if(sortOrder==='damageNumber') cmp=(a[1][0].damageNumber||'').localeCompare(b[1][0].damageNumber||'');
-    else cmp=new Date(b[1][0].modifiedOn||0)-new Date(a[1][0].modifiedOn||0);
+    else cmp=(dateMs(b[1][0].modifiedOn)||0)-(dateMs(a[1][0].modifiedOn)||0);
     return sortAsc?-cmp:cmp;
   });
 
@@ -1256,7 +1267,9 @@ function renderList(){
   const noGpsText=noGps>0?`<div style="font-size:10px;font-weight:500;color:#f59e0b;margin-top:1px;" title="${noGps} record(s) have no GPS coordinates">⚠ ${noGps} no GPS coordinates</div>`:'';
   document.getElementById('sideCount').innerHTML=`<div>${dmCount} damage record${dmCount!==1?'s':''}</div>${noGpsText}`;
 
-  document.getElementById('sideList').innerHTML=sortedGroups.map(([road,items])=>{
+  // Speed: the list is built as HTML text per road group, then put on the page in pieces. The first ~60 cards go in at once,
+  // the rest follow in batches between frames, so the list shows straight away even with 1,500+ damages (see _listQueue / flushList).
+  const groupHtml=sortedGroups.map(([road,items])=>{
     if(groupOpen[road]===undefined)groupOpen[road]=true;
     const isOpen=groupOpen[road];
     const safeId='grp_'+road.replace(/[^a-z0-9]/gi,'_');
@@ -1265,7 +1278,7 @@ function renderList(){
       const stageVal=r[activeStage]||r.status||'';
       const sc=STATUS_CFG[stageVal]||{bg:'rgba(75,85,99,0.08)',color:'#4B5563',label:(stageVal||'—').toUpperCase()};
       const pc=PRIORITY_CFG[r.priority]||{color:'#9ca3af'};
-      return `<div class="list-card" id="li-${gi}" onclick="flyToRecord(${gi})" style="border-left:3px solid ${col};">
+      return `<div class="list-card" id="li-${gi}" onclick="flyToRecord(${gi})" style="border-left:3px solid transparent;">
         <span class="card-arrow">›</span>
         <div class="card-top">
           <span class="card-dmgno" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.damageNumber||'No Number'}</span>
@@ -1291,12 +1304,29 @@ function renderList(){
       <span class="group-chevron${isOpen?' open':''}" style="margin-left:auto;">▶</span>
     </div>
     <div class="group-body${isOpen?' open':' collapsed'}" id="${safeId}" style="margin-bottom:${isOpen?'8px':'0'}">${cards}</div>`;
-  }).join('');
-
-  // Attach active state
-  document.querySelectorAll('.list-card').forEach(el=>{
-    el.style.borderLeft=`3px solid ${el.style.getPropertyValue('--accent')||'transparent'}`;
   });
+  const sizes=sortedGroups.map(([,items])=>groupOpen[items[0].roadName||'Unknown']?items.length:1);
+  const list=document.getElementById('sideList');
+  const token=++_listToken;
+  let i=0, n=0;
+  while(i<groupHtml.length&&n<60){n+=sizes[i];i++;}
+  list.innerHTML=groupHtml.slice(0,i).join('');
+  _listQueue=groupHtml.slice(i); _listSizes=sizes.slice(i);
+  const step=()=>{
+    if(token!==_listToken||!_listQueue.length)return;
+    let k=0, c=0;
+    while(k<_listQueue.length&&c<200){c+=_listSizes[k];k++;}
+    list.insertAdjacentHTML('beforeend',_listQueue.splice(0,k).join('')); _listSizes.splice(0,k);
+    if(_listQueue.length)setTimeout(step,16);
+  };
+  if(_listQueue.length)setTimeout(step,16);
+}
+// Rest of the list not yet on the page (renderList puts it in over the next frames)
+let _listQueue=[], _listSizes=[], _listToken=0;
+function flushList(){
+  if(!_listQueue.length)return;
+  document.getElementById('sideList').insertAdjacentHTML('beforeend',_listQueue.join(''));
+  _listQueue=[]; _listSizes=[];
 }
 
 function toggleGroup(h){
@@ -1317,6 +1347,7 @@ function highlightList(r){
   const road=r.roadName||'Unknown';
   if(!groupOpen[road]){groupOpen[road]=true;renderList();}
   const idx=records.indexOf(r);
+  if(!document.getElementById(`li-${idx}`))flushList();
   const el=document.getElementById(`li-${idx}`);
   if(el){el.classList.add('active');el.scrollIntoView({behavior:'smooth',block:'nearest'});}
 }
