@@ -799,20 +799,20 @@ function renderLegend(vis,extra){
   const el=document.getElementById('mapLegend'); if(!el)return;
   let h='<b>Legend</b>';
   const mlabel=HEATM[heatBy][0].toLowerCase();
-  const empty=extra&&!extra.max?(heatBy==='spend'&&spendReady===false?`<span style="color:#B45309">Loading spend to date from the ledger…</span>`:`<span style="color:#B45309">No ${mlabel} is recorded for the damages shown yet.</span>`):'';
+  const empty=extra&&!extra.max?(heatBy==='spend'&&spendReady===false?`<span style="color:#B45309">Loading spend to date from the ledger…</span>`:`<span style="color:#B45309">No ${mlabel} is recorded for the damages shown yet, so they show as pins.</span>`):'';
   if(mapShow==='grid'){
     const mx=(extra&&extra.max)||0;
     h+=`<span>Each square is about 3 km. Colour shows ${mlabel}, see-through so the map shows underneath.</span>`;
     h+=mx?[.05,.2,.4,.6,.9].map(t=>`<span class="lg"><i class="sq" style="background:${heatCol(t)}"></i>${metricText(Math.max(HEATM[heatBy][2]?0:1,mx*t))}</span>`).join(''):empty;
-    if(!empty&&extra&&extra.hidden)h+=`<span>${extra.hidden.toLocaleString()} damages with no ${mlabel} are hidden.</span>`;
+    if(!empty&&extra&&extra.pins)h+=`<span>${extra.pins.toLocaleString()} damages with no ${mlabel} show as pins.</span>`;
   } else if(mapShow==='clusters'){
     h+=`<span>Bubbles group nearby damages and split as you zoom in. Click a bubble to zoom; shift-click lists its damages. Single damages show as pins.${heatBy==='count'||!(extra&&extra.max)?'':' Bubbles show '+mlabel+'.'}</span>`;
     h+=empty;
-    if(!empty&&extra&&extra.hidden)h+=`<span>${extra.hidden.toLocaleString()} damages with no ${mlabel} are hidden.</span>`;
+    if(!empty&&extra&&extra.pins)h+=`<span>${extra.pins.toLocaleString()} damages with no ${mlabel} show as pins.</span>`;
   } else {
     h+=legendKeys(vis).map(([k,c])=>`<span class="lg"><i style="background:${c}"></i>${k}</span>`).join('');
   }
-  h+=`<span class="shown">${(extra&&extra.shown!=null?extra.shown:vis.length).toLocaleString()} shown</span>`;
+  h+=`<span class="shown">${vis.length.toLocaleString()} shown</span>`;
   el.innerHTML=h;
 }
 
@@ -825,7 +825,7 @@ function drawSelected(){
   if(selectedMarker&&azMap){azMap.markers.remove(selectedMarker);}
   selectedMarker=null;
   const r=selectedRec;
-  if(!r||!azMap||!_styleReady||mapShow==='grid'||!getFiltered().includes(r))return;
+  if(!r||!azMap||!_styleReady||!getFiltered().includes(r))return;
   selectedMarker=new atlas.HtmlMarker({htmlContent:`<div style="display:block;"><div class="pin-inner" style="display:block;">${pinSvg(colourOf(r),r.category)}</div></div>`,position:[r.lng,r.lat],anchor:'bottom'});
   azMap.markers.add(selectedMarker);
   const el=selectedMarker.getElement();
@@ -1585,7 +1585,7 @@ function drawClusters(vis,gen){
   const z=azMap.getCamera().zoom||7;
   const sz=Math.max(.003,.5/Math.pow(2,z-7));
   const fn=HEATM[heatBy][1];
-  // v93: clustering by a cost draws only damages that have that cost (no $0 bubbles or pins). Number of damages draws them all.
+  // v96: only damages that have that cost go into bubbles (no $0 bubbles); the rest show as pins. Number of damages puts them all in bubbles.
   const byCount=heatBy==='count';
   const rows=byCount?vis:vis.filter(r=>fn(r)>0);
   const cells=gridCells(rows,sz).map(c=>({...c,v:c.rs.reduce((a,r)=>a+fn(r),0)}));
@@ -1596,9 +1596,10 @@ function drawClusters(vis,gen){
     if(c.rs.length===1){singles.push(c.rs[0]);return;}
     const n=c.rs.length;
     const label=byCount?String(n):money(c.v);
-    const d=26+Math.round(Math.sqrt(byCount?n/nMax:c.v/mx)*34);
+    // v95: same width and height, at least wide enough for the label, so a bubble is always a circle (it used to stretch into a pill)
+    const d=Math.max(26+Math.round(Math.sqrt(byCount?n/nMax:c.v/mx)*34),label.length*7+12);
     const m=new atlas.HtmlMarker({position:[c.lng,c.lat],anchor:'center',
-      htmlContent:`<div title="${n} damages${byCount?'':' · '+money(c.v)} · click to zoom in, shift-click to list" style="min-width:${d}px;height:${d}px;padding:0 4px;box-sizing:border-box;border-radius:${d}px;background:rgba(37,99,235,.85);border:2px solid #fff;color:#fff;font:700 12px 'Segoe UI',sans-serif;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer">${label}</div>`});
+      htmlContent:`<div title="${n} damages${byCount?'':' · '+money(c.v)} · click to zoom in, shift-click to list" style="width:${d}px;height:${d}px;padding:0;box-sizing:border-box;border-radius:50%;white-space:nowrap;background:rgba(37,99,235,.85);border:2px solid #fff;color:#fff;font:700 12px 'Segoe UI',sans-serif;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer">${label}</div>`});
     azMap.markers.add(m);
     markers.push({marker:m,record:null});
     // Native click on the bubble (Azure Maps marker events don't carry the shift key)
@@ -1609,12 +1610,12 @@ function drawClusters(vis,gen){
       azMap.setCamera({center:[c.lng,c.lat],zoom:Math.min(16,z+2),type:'ease',duration:400});
     });
   });
-  drawPins(singles,gen);
-  return {max:rows.length,shown:rows.length,hidden:vis.length-rows.length};
+  drawPins(singles.concat(byCount?[]:vis.filter(r=>!(fn(r)>0))),gen);
+  return {max:rows.length,pins:vis.length-rows.length};
 }
-function drawGrid(vis){
+function drawGrid(vis,gen){
   const fn=HEATM[heatBy][1];
-  // v94: a grid by a cost draws only damages that have that cost, same as Clusters. Number of damages draws them all.
+  // v96: only damages that have that cost go into squares; the rest show as pins, same as Clusters. Number of damages puts them all in squares.
   const rows=heatBy==='count'?vis:vis.filter(r=>fn(r)>0);
   const cells=gridCells(rows,.027).map(c=>({...c,v:c.rs.reduce((a,r)=>a+fn(r),0)}));
   const mx=Math.max(0,...cells.map(c=>c.v));
@@ -1623,7 +1624,10 @@ function drawGrid(vis){
   _gridSrc.add(cells.map(c=>new atlas.data.Feature(new atlas.data.Polygon([[[c.w,c.s],[c.e,c.s],[c.e,c.n],[c.w,c.n],[c.w,c.s]]]),
     {fill:heatCol(mx?c.v/mx:0),n:c.rs.length,v:c.v,roads:[...new Set(c.rs.map(r=>r.roadName).filter(Boolean))].slice(0,3).join(', ')})));
   _gridLayer=new atlas.layer.PolygonLayer(_gridSrc,null,{fillColor:['get','fill'],fillOpacity:.55});
-  azMap.layers.add(_gridLayer);
+  // Under the pins, so they stay visible and clickable
+  setupPinLayer();
+  azMap.layers.add(_gridLayer,_pinLayer.getId());
+  drawPins(vis.filter(r=>!rows.includes(r)),gen);
   if(!_gridPopup)_gridPopup=new atlas.Popup({closeButton:false,pixelOffset:[0,-4]});
   azMap.events.add('mousemove',_gridLayer,e=>{
     const f=e.shapes&&e.shapes[0];if(!f)return;const pr=f.getProperties();
@@ -1631,7 +1635,7 @@ function drawGrid(vis){
     _gridPopup.open(azMap);
   });
   azMap.events.add('mouseleave',_gridLayer,()=>_gridPopup.close());
-  return {max:mx,shown:rows.length,hidden:vis.length-rows.length};
+  return {max:mx,pins:vis.length-rows.length};
 }
 function updatePins(){
   if(!azMap||!_styleReady){renderLegend(getFiltered());return;} // the map's ready event draws the pins
@@ -1643,7 +1647,7 @@ function updatePins(){
     const gen=++_pinGen;
     clearMapLayers();
     const vis=getFiltered();
-    if(mapShow==='grid'){const x=drawGrid(vis);renderLegend(vis,x);}
+    if(mapShow==='grid'){const x=drawGrid(vis,gen);renderLegend(vis,x);}
     else if(mapShow==='clusters'){const x=drawClusters(vis,gen);renderLegend(vis,x);}
     else{renderLegend(vis);drawPins(vis,gen);}
     drawSelected();
