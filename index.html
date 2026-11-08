@@ -806,7 +806,7 @@ function renderLegend(vis,extra){
     h+=mx?[.05,.2,.4,.6,.9].map(t=>`<span class="lg"><i class="sq" style="background:${heatCol(t)}"></i>${metricText(Math.max(HEATM[heatBy][2]?0:1,mx*t))}</span>`).join(''):empty;
     if(!empty&&extra&&extra.hidden)h+=`<span>${extra.hidden.toLocaleString()} damages with no ${mlabel} are hidden.</span>`;
   } else if(mapShow==='clusters'){
-    h+=`<span>Bubbles group nearby damages and split as you zoom in. Click a bubble to zoom in and list its damages on the left. Single damages show as pins.${heatBy==='count'||!(extra&&extra.max)?'':' Bubbles show '+mlabel+'.'}</span>`;
+    h+=`<span>Bubbles group nearby damages and split as you zoom in. Click a bubble to zoom in and list its damages on the left.${heatBy==='count'||!(extra&&extra.max)?'':' Bubbles show '+mlabel+'.'}</span>`;
     h+=empty;
     if(!empty&&extra&&extra.hidden)h+=`<span>${extra.hidden.toLocaleString()} damages with no ${mlabel} are hidden.</span>`;
   } else {
@@ -825,7 +825,7 @@ function drawSelected(){
   if(selectedMarker&&azMap){azMap.markers.remove(selectedMarker);}
   selectedMarker=null;
   const r=selectedRec;
-  if(!r||!azMap||!_styleReady||mapShow==='grid'||!getFiltered().includes(r))return;
+  if(!r||!azMap||!_styleReady||mapShow!=='points'||!getFiltered().includes(r))return;
   selectedMarker=new atlas.HtmlMarker({htmlContent:`<div style="display:block;"><div class="pin-inner" style="display:block;">${pinSvg(colourOf(r),r.category)}</div></div>`,position:[r.lng,r.lat],anchor:'bottom'});
   azMap.markers.add(selectedMarker);
   const el=selectedMarker.getElement();
@@ -965,8 +965,9 @@ function renderStats(){
 function buildCatChips(){
   const sel=document.getElementById('filterCategory');
   if(!sel)return;
+  const inView=new Set(getFiltered('category').map(r=>r.category));
   sel.innerHTML=`<option value="">All types</option>`+
-    TYPE_ORDER().map(cat=>
+    TYPE_ORDER().filter(cat=>inView.has(cat)||cat===activeCategory).map(cat=>
       `<option value="${cat}"${activeCategory===cat?' selected':''}>${cat==='EPAR'?'EPAR / REPA':cat}</option>`
     ).join('');
 }
@@ -974,13 +975,13 @@ function setCatFromDropdown(cat){
   activeCategory=cat||null;
   Object.keys(groupOpen).forEach(k=>{groupOpen[k]=false;});
   if(popup)popup.close(); closeFloatPopup();
-  renderStats(); renderList(); updatePins();
+  applyFilters();
 }
 function setCat(cat){
   activeCategory=activeCategory===cat?null:cat;
   buildCatChips();
   Object.keys(groupOpen).forEach(k=>{groupOpen[k]=false;});
-  if(popup)popup.close(); closeFloatPopup(); renderStats(); renderList(); updatePins();
+  if(popup)popup.close(); closeFloatPopup(); applyFilters();
 }
 
 /* ── STAGE DROPDOWN ── */
@@ -1019,60 +1020,55 @@ function populateStatusDropdown(){
 }
 
 /* ── DROPDOWNS ── */
+// v100: every filter change comes through here, so the map, tiles, list and the other dropdowns stay together.
+function applyFilters(){
+  bubbleKeys=null; // a circle's list belongs to the old filters
+  // The damage open on the right no longer matches: close it, in the app too
+  const open=_dpRecord||selectedRec;
+  if(open&&!getFiltered().some(r=>recKey(r)===recKey(open))){
+    closeFloatPopup();
+    postUp({type:'TASK_UPDATED', task:{type:'CLOSE_IMAGES', guid:'close', at:Date.now()}});
+  }
+  populateDropdowns(); renderStats(); renderList(); updatePins();
+  fitIfChanged();
+}
+// v101: zoom to the results only when they are different damages. noMove just remembers the current results.
+let _fitKey=null;
+function fitIfChanged(noMove){
+  const k=getFiltered().map(recKey).join();
+  const changed=_fitKey!==null&&k!==_fitKey;
+  _fitKey=k;
+  if(changed&&!noMove)fitAll();
+}
 function populateDropdowns(){
-  const base=activeEvent?records.filter(r=>r.eventNo===activeEvent):records;
-  const damages=[...new Set(base.map(r=>r.damageNumber).filter(Boolean))].sort();
-  const roads=[...new Set(base.map(r=>r.roadName).filter(Boolean))].sort();
-  const dS=document.getElementById('filterDamage'), rS=document.getElementById('filterRoad');
-  const pS=document.getElementById('filterPM'), prS=document.getElementById('filterPriority');
-  const cd=dS.value, cr=rS.value, cp=pS.value, cpr=prS.value;
-
-  dS.innerHTML='<option value="">All</option>'+damages.map(v=>`<option value="${v}">${v}</option>`).join('');
-  rS.innerHTML='<option value="">All roads</option>'+roads.map(v=>`<option value="${v}">${v}</option>`).join('');
-
-  // PM — use Dropdown Options table if available, else derive from data
-  const pms=pmOptions.length
-    ? pmOptions.map(o=>o.Name).filter(Boolean)
-    : [...new Set(base.map(r=>r.pm).filter(Boolean))].sort();
-  pS.innerHTML='<option value="">All PMs</option>'+pms.map(v=>`<option value="${v}">${v}</option>`).join('');
-
-  // Priority — use Dropdown Options table if available, else derive from data
-  const priorities=priorityOptions.length
-    ? priorityOptions.map(o=>o.Name).filter(Boolean)
-    : [...new Set(base.map(r=>r.priority).filter(Boolean))].sort();
-  prS.innerHTML='<option value="">All priorities</option>'+priorities.map(v=>`<option value="${v}">${v}</option>`).join('');
-
-  if(damages.includes(cd))dS.value=cd;
-  if(roads.includes(cr))rS.value=cr;
-  if(pms.includes(cp))pS.value=cp;
-  if(priorities.includes(cpr))prS.value=cpr;
-
-  // Area (v86): areas in the data, A-Z
-  const aS=document.getElementById('filterArea'), ca=aS.value;
-  const areas=[...new Set(base.map(r=>r.depot).filter(Boolean))].sort();
-  aS.innerHTML='<option value="">All areas</option>'+areas.map(v=>`<option value="${v}">${v}</option>`).join('');
-  if(areas.includes(ca))aS.value=ca; else {aS.value='';filterArea='';}
-
-  // Lifecycle stage (v86): lifecycle order from Power Apps (lifeOptions), else the stages in the data A-Z
-  const lS=document.getElementById('filterLife'), cl=lS.value;
-  const inData=new Set(base.map(r=>r.life).filter(Boolean));
-  const lifes=lifeOptions.length
-    ? lifeOptions.map(o=>o.Name).filter(n=>n&&inData.has(n))
-    : [...inData].sort();
-  lS.innerHTML='<option value="">All stages</option>'+lifes.map(v=>`<option value="${v}">${v}</option>`).join('');
-  if(lifes.includes(cl))lS.value=cl; else {lS.value='';filterLife='';}
-
-  // Programme and Contractor / team (v86): values in the data, A-Z
-  const fill=(id,ph,vals,cur,reset)=>{const el=document.getElementById(id);el.innerHTML=`<option value="">${ph}</option>`+vals.map(v=>`<option value="${v}">${v}</option>`).join('');if(vals.includes(cur))el.value=cur;else{el.value='';reset();}};
-  fill('filterProg','All programmes',[...new Set(base.map(r=>r.programme).filter(Boolean))].sort(),filterProg,()=>{filterProg='';});
-  fill('filterTeam','All',[...new Set(base.map(r=>r.constructionTeam).filter(Boolean))].sort(),filterTeam,()=>{filterTeam='';});
+  // v100: each dropdown offers what the other filters leave. Its own choice always stays in its list, even if nothing matches it any more.
+  const fill=(id,ph,vals,cur)=>{
+    const el=document.getElementById(id);
+    const list=cur&&!vals.includes(cur)?[cur,...vals]:vals;
+    el.replaceChildren(new Option(ph,''),...list.map(v=>new Option(v,v)));
+    el.value=cur||'';
+  };
+  const inData=(skip,field)=>[...new Set(getFiltered(skip).map(r=>r[field]).filter(Boolean))];
+  // Dropdown Options order first, then anything else in the data A-Z
+  const ordered=(opts,vals)=>{const names=opts.map(o=>o.Name).filter(Boolean);return [...names.filter(n=>vals.includes(n)),...vals.filter(v=>!names.includes(v)).sort()];};
+  buildCatChips();
+  fill('filterDamage','All',inData('damage','damageNumber').sort(),filterDamage);
+  fill('filterRoad','All roads',inData('road','roadName').sort(),filterRoad);
+  fill('filterPM','All PMs',ordered(pmOptions,inData('pm','pm')),filterPM);
+  fill('filterPriority','All priorities',ordered(priorityOptions,inData('priority','priority')),filterPriority);
+  fill('filterArea','All areas',inData('area','depot').sort(),filterArea);
+  fill('filterLife','All stages',ordered(lifeOptions,inData('life','life')),filterLife);
+  fill('filterProg','All programmes',inData('prog','programme').sort(),filterProg);
+  fill('filterTeam','All',inData('team','constructionTeam').sort(),filterTeam);
+  const ov=getFiltered('overall');
+  fill('filterOverall','All statuses',['Open','Overdue','Completed'].filter(v=>ov.some(r=>overallMatch(r,v))),filterOverall);
   populateStatusDropdown();
 }
 function onSearch(val){
   filterSearch=val.trim();
   const clearBtn=document.getElementById('sideSearchClear');
   if(clearBtn) clearBtn.style.display=filterSearch?'block':'none';
-  renderStats(); renderList(); updatePins();
+  applyFilters();
 }
 function clearSearch(){
   filterSearch='';
@@ -1080,7 +1076,7 @@ function clearSearch(){
   const clearBtn=document.getElementById('sideSearchClear');
   if(inp) inp.value='';
   if(clearBtn) clearBtn.style.display='none';
-  renderStats(); renderList(); updatePins();
+  applyFilters();
 }
 function clearFilters(){
   activeCategory=null; filterDamage=''; filterRoad=''; filterPM=''; filterPriority=''; filterArea=''; filterLife=''; filterProg=''; filterTeam=''; filterOverall=''; filterStatus=''; activeStage='status'; filterHasDamage=true; filterSearch='';
@@ -1110,8 +1106,9 @@ function clearFilters(){
   if(_listPopup)_listPopup.close();
   updateHasDamageBtn();
   Object.keys(groupOpen).forEach(k=>{groupOpen[k]=false;});
-  buildCatChips(); if(popup)popup.close(); closeFloatPopup(); renderStats(); renderList(); updatePins();
+  if(popup)popup.close(); closeFloatPopup(); populateDropdowns(); renderStats(); renderList(); updatePins();
   fitAll(); // v90: zoom back out to all damages
+  fitIfChanged(true);
   // Tell Power Apps to close its panels. v90: at makes each message different; the app only reacts when the message changes, so a second Reset was ignored.
   postUp({type:'TASK_UPDATED', task:{type:'CLOSE_IMAGES', guid:'close', at:Date.now()}});
 }
@@ -1181,21 +1178,26 @@ function fmtDateOnly(d){
 }
 
 /* ── FILTER ── */
-function getFiltered(){
+// v100: Clusters or Grid by a cost shows only damages with that cost, so tiles, list and dropdowns follow the map. Spend not loaded yet: nothing to filter on.
+const costFilterOn=()=>mapShow!=='points'&&heatBy!=='count'&&!(heatBy==='spend'&&spendReady===false);
+// skip: leave that one filter out (a dropdown's options come from all the OTHER filters). noCost: ignore the cost filter above.
+function getFiltered(skip,noCost){
   const q=filterSearch.toLowerCase();
+  const cost=!noCost&&costFilterOn()?HEATM[heatBy][1]:null;
   return records.filter(r=>{
     if(activeEvent&&r.eventNo!==activeEvent)return false;
     if(filterHasDamage&&!r.damageNumber)return false;
-    if(activeCategory&&r.category!==activeCategory)return false;
-    if(filterDamage&&r.damageNumber!==filterDamage)return false;
-    if(filterRoad&&r.roadName!==filterRoad)return false;
-    if(filterPM&&r.pm!==filterPM)return false;
-    if(filterPriority&&r.priority!==filterPriority)return false;
-    if(filterArea&&r.depot!==filterArea)return false;
-    if(filterLife&&r.life!==filterLife)return false;
-    if(filterProg&&r.programme!==filterProg)return false;
-    if(filterTeam&&r.constructionTeam!==filterTeam)return false;
-    if(filterOverall&&!overallMatch(r,filterOverall))return false;
+    if(cost&&!(cost(r)>0))return false;
+    if(skip!=='category'&&activeCategory&&r.category!==activeCategory)return false;
+    if(skip!=='damage'&&filterDamage&&r.damageNumber!==filterDamage)return false;
+    if(skip!=='road'&&filterRoad&&r.roadName!==filterRoad)return false;
+    if(skip!=='pm'&&filterPM&&r.pm!==filterPM)return false;
+    if(skip!=='priority'&&filterPriority&&r.priority!==filterPriority)return false;
+    if(skip!=='area'&&filterArea&&r.depot!==filterArea)return false;
+    if(skip!=='life'&&filterLife&&r.life!==filterLife)return false;
+    if(skip!=='prog'&&filterProg&&r.programme!==filterProg)return false;
+    if(skip!=='team'&&filterTeam&&r.constructionTeam!==filterTeam)return false;
+    if(skip!=='overall'&&filterOverall&&!overallMatch(r,filterOverall))return false;
     if(filterStatus&&r[activeStage]!==filterStatus)return false;
     if(q){
       const fields=[r.damageNumber,r.roadName,r.location,r.pm,r.category,r.priority,r.status,r.damageDetails,r.roadType,r.depot,r.life,r.eventNo];
@@ -1301,7 +1303,7 @@ function renderList(){
     if(q){const fields=[r.damageNumber,r.roadName,r.location,r.pm,r.category,r.priority,r.status,r.damageDetails,r.roadType,r.depot,r.life,r.eventNo];if(!fields.some(v=>(v||'').toLowerCase().includes(q)))return false;}
     return true;
   }).length;
-  const noGps=bubbleKeys?0:totalFiltered-vis.length;
+  const noGps=bubbleKeys?0:totalFiltered-getFiltered(null,true).length;
   const noGpsText=noGps>0?`<div style="font-size:10px;font-weight:500;color:#f59e0b;margin-top:1px;" title="${noGps} record(s) have no GPS coordinates">⚠ ${noGps} no GPS coordinates</div>`:'';
   document.getElementById('sideCount').innerHTML=bubbleKeys
     ?`<div>${bubbleKind==='pin'?`${dmCount} damage selected`:`${dmCount} damage${dmCount!==1?'s':''} in this ${bubbleKind}`}${heatBy==='count'||mapShow==='points'?'':' · '+money(vis.reduce((a,r)=>a+HEATM[heatBy][1](r),0))}</div><div onclick="clearBubbleList()" style="font-size:10px;font-weight:600;color:#2563EB;cursor:pointer;margin-top:1px;">Show all damages</div>`
@@ -1599,7 +1601,6 @@ function listDamages(c){
   _listPopup.open(azMap);
 }
 function drawClusters(vis,gen){
-  const singles=[];
   const z=azMap.getCamera().zoom||7;
   const sz=Math.max(.003,.5/Math.pow(2,z-7));
   const fn=HEATM[heatBy][1];
@@ -1608,29 +1609,31 @@ function drawClusters(vis,gen){
   const rows=byCount?vis:vis.filter(r=>fn(r)>0);
   const cells=gridCells(rows,sz).map(c=>({...c,v:c.rs.reduce((a,r)=>a+fn(r),0)}));
   // Size is relative to the largest bubble, 26 to 60 px
-  const mx=Math.max(0,...cells.filter(c=>c.rs.length>1).map(c=>c.v));
-  const nMax=Math.max(1,...cells.filter(c=>c.rs.length>1).map(c=>c.rs.length));
+  // v99: a lone damage is a circle too, so Clusters has no pins at all
+  const mx=Math.max(0,...cells.map(c=>c.v));
+  const nMax=Math.max(1,...cells.map(c=>c.rs.length));
   cells.forEach(c=>{
-    if(c.rs.length===1){singles.push(c.rs[0]);return;}
     const n=c.rs.length;
     const label=byCount?String(n):money(c.v);
     // v95: same width and height, at least wide enough for the label, so a bubble is always a circle (it used to stretch into a pill)
     const d=Math.max(26+Math.round(Math.sqrt(byCount?n/nMax:c.v/mx)*34),label.length*7+12);
     const m=new atlas.HtmlMarker({position:[c.lng,c.lat],anchor:'center',
-      htmlContent:`<div title="${n} damages${byCount?'':' · '+money(c.v)} · click to zoom in and list them on the left" style="width:${d}px;height:${d}px;padding:0;box-sizing:border-box;border-radius:50%;white-space:nowrap;background:rgba(37,99,235,.85);border:2px solid #fff;color:#fff;font:700 12px 'Segoe UI',sans-serif;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer">${label}</div>`});
+      htmlContent:`<div title="${n===1?c.rs[0].damageNumber:n+' damages'}${byCount?'':' · '+money(c.v)} · ${n===1?'click to open it':'click to zoom in and list them on the left'}" style="width:${d}px;height:${d}px;padding:0;box-sizing:border-box;border-radius:50%;white-space:nowrap;background:rgba(37,99,235,.85);border:2px solid #fff;color:#fff;font:700 12px 'Segoe UI',sans-serif;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer">${label}</div>`});
     azMap.markers.add(m);
     markers.push({marker:m,record:null});
     // Native click on the bubble (Azure Maps marker events don't carry the shift key)
     const bel=m.getElement();
     if(bel)bel.addEventListener('click',ev=>{
       ev.stopPropagation();
+      // One damage: same as clicking its pin (lists it and opens its right panel, no zoom)
+      if(n===1){setBubbleList(c,'pin');showFloatPopup(c.rs[0]);highlightList(c.rs[0]);return;}
       setBubbleList(c,'circle');
       if(ev.shiftKey||z>=15){listDamages(c);return;}
       azMap.setCamera({center:[c.lng,c.lat],zoom:Math.min(16,z+2),type:'ease',duration:400});
     });
   });
-  drawPins(singles,gen);
-  return {max:rows.length,shown:rows.length,hidden:vis.length-rows.length};
+  drawPins([],gen);
+  return {max:rows.length,shown:rows.length,hidden:getFiltered(null,true).length-rows.length};
 }
 let _gridCells=[];
 function drawGrid(vis){
@@ -1660,7 +1663,7 @@ function drawGrid(vis){
     setBubbleList(c,'square');
     azMap.setCamera({center:[(c.w+c.e)/2,(c.s+c.n)/2],zoom:Math.min(16,(azMap.getCamera().zoom||7)+2),type:'ease',duration:400});
   });
-  return {max:mx,shown:rows.length,hidden:vis.length-rows.length};
+  return {max:mx,shown:rows.length,hidden:getFiltered(null,true).length-rows.length};
 }
 function updatePins(){
   if(!azMap||!_styleReady){renderLegend(getFiltered());return;} // the map's ready event draws the pins
@@ -1700,8 +1703,7 @@ function fitAll(){
     const zLng=Math.log2(visibleW*360/(dlng*256*2));
     const zLat=Math.log2(mapH*170/(dlat*256*2));
     let zoom=Math.floor(Math.min(zLng,zLat));
-    const isFiltered=!!(activeCategory||filterDamage||filterRoad||filterPM||filterPriority||filterArea||filterLife||filterProg||filterTeam||filterOverall||filterStatus||filterSearch);
-    const minZoom=isFiltered?(vis.length===1?14:9):7;
+    const minZoom=vis.length===1?14:3;
     zoom=Math.min(15,Math.max(minZoom,zoom));
     // Shift center left (in screen space) by half the panel width so pins land in the visible area
     if(panelOpen){
@@ -2367,6 +2369,7 @@ function reloadData(){
   if(loadFromHash()){
     buildStageDropdown(); buildCatChips(); populateDropdowns();
     renderStats(); renderList(); updateHasDamageBtn(); updatePins();
+    fitIfChanged(!costFilterOn());
     setTimeout(alignStatsBar, 50);
     if(!azMap&&typeof atlas!=='undefined')initMap();
     applyFocus();
@@ -2374,30 +2377,30 @@ function reloadData(){
 }
 
 /* ── EVENT LISTENERS ── */
-document.getElementById('filterDamage').addEventListener('change',function(){filterDamage=this.value;renderStats();renderList();updatePins();});
-document.getElementById('filterRoad').addEventListener('change',function(){filterRoad=this.value;renderStats();renderList();updatePins();});
-document.getElementById('filterPM').addEventListener('change',function(){filterPM=this.value;renderStats();renderList();updatePins();});
-document.getElementById('filterPriority').addEventListener('change',function(){filterPriority=this.value;renderStats();renderList();updatePins();});
-document.getElementById('filterArea').addEventListener('change',function(){filterArea=this.value;renderStats();renderList();updatePins();});
-document.getElementById('filterLife').addEventListener('change',function(){filterLife=this.value;renderStats();renderList();updatePins();});
-document.getElementById('filterProg').addEventListener('change',function(){filterProg=this.value;renderStats();renderList();updatePins();});
-document.getElementById('filterTeam').addEventListener('change',function(){filterTeam=this.value;renderStats();renderList();updatePins();});
-document.getElementById('filterOverall').addEventListener('change',function(){filterOverall=this.value;renderStats();renderList();updatePins();});
+document.getElementById('filterDamage').addEventListener('change',function(){filterDamage=this.value;applyFilters();});
+document.getElementById('filterRoad').addEventListener('change',function(){filterRoad=this.value;applyFilters();});
+document.getElementById('filterPM').addEventListener('change',function(){filterPM=this.value;applyFilters();});
+document.getElementById('filterPriority').addEventListener('change',function(){filterPriority=this.value;applyFilters();});
+document.getElementById('filterArea').addEventListener('change',function(){filterArea=this.value;applyFilters();});
+document.getElementById('filterLife').addEventListener('change',function(){filterLife=this.value;applyFilters();});
+document.getElementById('filterProg').addEventListener('change',function(){filterProg=this.value;applyFilters();});
+document.getElementById('filterTeam').addEventListener('change',function(){filterTeam=this.value;applyFilters();});
+document.getElementById('filterOverall').addEventListener('change',function(){filterOverall=this.value;applyFilters();});
 document.getElementById('colourBy').addEventListener('change',function(){colourBy=this.value;updatePins();});
-document.getElementById('mapShow').addEventListener('change',function(){mapShow=this.value;clearBubbleList();
+document.getElementById('mapShow').addEventListener('change',function(){mapShow=this.value;
   document.getElementById('grpColourBy').style.display=mapShow==='points'?'':'none';
   document.getElementById('grpHeatBy').style.display=mapShow==='points'?'none':'';
   document.getElementById('lblHeatBy').textContent=mapShow==='clusters'?'Cluster by':'Heat by';
   if(_listPopup)_listPopup.close();
-  updatePins();});
+  applyFilters();});
 // v91: asks the app to load the ledger the first time Spend to date is picked; the spend then arrives with the next data update
 function askSpend(){
   if(heatBy!=='spend'||spendReady!==false||_spendAsked)return;
   _spendAsked=true;
   postUp({type:'TASK_UPDATED',task:{type:'NEED_SPEND',guid:'spend',at:Date.now()}});
 }
-document.getElementById('heatBy').addEventListener('change',function(){heatBy=this.value;clearBubbleList();askSpend();updatePins();});
-document.getElementById('filterStatus').addEventListener('change',function(){filterStatus=this.value;renderStats();renderList();updatePins();});
+document.getElementById('heatBy').addEventListener('change',function(){heatBy=this.value;askSpend();applyFilters();});
+document.getElementById('filterStatus').addEventListener('change',function(){filterStatus=this.value;applyFilters();});
 
 // Reload when Power Apps updates the iframe src
 /* ── ALIGN STATS BAR TO CATEGORY FILTER ── */
