@@ -16,6 +16,12 @@
   #sw button { border: 0; background: #FFFFFF; color: #374151; font: 600 12px "Segoe UI", Arial, sans-serif; padding: 5px 10px; cursor: pointer; }
   #sw button + button { border-left: 1px solid #E5E7EB; }
   #sw button.on { background: #2563EB; color: #FFFFFF; }
+  #zm { position: absolute; bottom: 22px; right: 8px; z-index: 6; display: flex; flex-direction: column; background: #FFFFFF; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.3); overflow: hidden; }
+  #zm button { border: 0; background: #FFFFFF; color: #374151; font: 600 16px/1 "Segoe UI", Arial, sans-serif; width: 28px; height: 26px; cursor: pointer; }
+  #zm button + button { border-top: 1px solid #E5E7EB; }
+  #zm button:hover, #sw button:not(.on):hover { background: #F3F4F6; }
+  .road { position: absolute; left: 50%; top: 100%; transform: translateX(-50%); margin-top: 4px; background: rgba(17,24,39,.85); color: #FFFFFF; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; white-space: nowrap; pointer-events: none; }
+  .pinwrap { position: relative; }
   .tip { position: absolute; transform: translate(-50%, -100%); margin-top: -14px; background: #111827; color: #FFFFFF; font-size: 12px; padding: 3px 7px; border-radius: 4px; white-space: nowrap; pointer-events: none; display: none; z-index: 5; }
 </style>
 </head>
@@ -24,8 +30,12 @@
 <div id="msg">No coordinates recorded for this damage.</div>
 <div id="tip" class="tip"></div>
 <div id="sw" role="group" aria-label="Map style">
-  <button type="button" data-style="road" aria-pressed="true" class="on">Road</button>
-  <button type="button" data-style="satellite_road_labels" aria-pressed="false">Satellite</button>
+  <button type="button" data-style="satellite_road_labels" aria-pressed="true" class="on">Satellite</button>
+  <button type="button" data-style="road" aria-pressed="false">Road</button>
+</div>
+<div id="zm" role="group" aria-label="Zoom">
+  <button type="button" id="zin" aria-label="Zoom in">+</button>
+  <button type="button" id="zout" aria-label="Zoom out">&minus;</button>
 </div>
 <script>
 /*
@@ -33,15 +43,15 @@
   Used by the DRFA Manager EW record Location card (TCIFrame code component).
 
   Data comes in the URL hash as JSON (only % needs escaping as %25):
-    #{"c":{"lat":-31.9,"lng":152.4,"lbl":"EW1211-0001"},
+    #{"c":{"lat":-31.9,"lng":152.4,"lbl":"EW1211-0001","road":"Smiths Rd"},
       "p":[{"lat":-31.91,"lng":152.41,"lbl":"EW1211-0002"}, ...],
       "s":"road"}
-  c = the damage (red pin), p = nearby damages (blue pins), s = map style (optional:
-  road, satellite, satellite_road_labels, grayscale_light ...; default road).
+  c = the damage (red pin; road = road name shown under it), p = nearby damages (blue pins), s = map style (optional:
+  road, satellite, satellite_road_labels, grayscale_light ...; default satellite_road_labels).
   The page re-reads the hash when it changes, so the app can switch records without a reload.
 */
 const AZURE_KEY = 'DTXUfyEzWP2xb64BDnP2NCE3qdKRl4rLskMDwixH83RcsbBkbMV4JQQJ99CFACYeBjFofH37AAAgAZMP144l';
-const RED = '#C50F1F', BLUE = '#2563EB';
+const RED = '#C50F1F', BLUE = '#2563EB', ZOOM = 17;
 let map = null, ready = false, markers = [];
 
 function readHash() {
@@ -66,10 +76,19 @@ function showTip(marker, text) {
 function hideTip() { document.getElementById('tip').style.display = 'none'; }
 
 function addPin(p, colour, main) {
+  const wrap = document.createElement('div');
+  wrap.className = 'pinwrap';
   const el = document.createElement('div');
   el.className = 'pin' + (main ? ' main' : '');
   el.style.background = colour;
-  const m = new atlas.HtmlMarker({ htmlContent: el, position: [+p.lng, +p.lat], anchor: 'center' });
+  wrap.appendChild(el);
+  if (main && p.road) {
+    const lb = document.createElement('div');
+    lb.className = 'road';
+    lb.textContent = p.road;
+    wrap.appendChild(lb);
+  }
+  const m = new atlas.HtmlMarker({ htmlContent: wrap, position: [+p.lng, +p.lat], anchor: 'center' });
   map.markers.add(m);
   map.events.add('mouseover', m, () => showTip(m, p.lbl));
   map.events.add('mouseout', m, hideTip);
@@ -81,25 +100,22 @@ function draw() {
   const d = readHash() || {};
   const msg = document.getElementById('msg');
   map.markers.clear(); markers = []; hideTip();
-  if (!okPt(d.c)) { msg.style.display = 'flex'; document.getElementById('sw').style.display = 'none'; return; }
+  if (!okPt(d.c)) { msg.style.display = 'flex'; document.getElementById('sw').style.display = 'none'; document.getElementById('zm').style.display = 'none'; return; }
   msg.style.display = 'none';
   document.getElementById('sw').style.display = 'flex';
+  document.getElementById('zm').style.display = 'flex';
 
   const near = (Array.isArray(d.p) ? d.p : []).filter(okPt);
   near.forEach(p => addPin(p, BLUE, false));
   addPin(d.c, RED, true);   // added last so it sits on top
 
-  if (near.length) {
-    const pts = near.map(p => [+p.lng, +p.lat]).concat([[+d.c.lng, +d.c.lat]]);
-    map.setCamera({ bounds: atlas.data.BoundingBox.fromPositions(pts), padding: 30, maxZoom: 15, type: 'jump' });
-  } else {
-    map.setCamera({ center: [+d.c.lng, +d.c.lat], zoom: 15, type: 'jump' });
-  }
+  // Close in on the damage (about street level); nearby pins show when they are in view, or after zooming out.
+  map.setCamera({ center: [+d.c.lng, +d.c.lat], zoom: ZOOM, type: 'jump' });
 }
 
 /* Road / Satellite switch (top right). The choice is remembered in this browser and kept when the app
    switches record; the hash's "s" only sets the starting style when nothing has been chosen yet. */
-function savedStyle() { try { return localStorage.getItem('drfaLocMapStyle'); } catch (e) { return null; } }
+function savedStyle() { try { return localStorage.getItem('drfaLocMapStyle2'); } catch (e) { return null; } }
 function setSw(style) {
   document.querySelectorAll('#sw button').forEach(b => {
     const on = b.dataset.style === style;
@@ -110,17 +126,17 @@ function setSw(style) {
 document.querySelectorAll('#sw button').forEach(b => b.addEventListener('click', () => {
   const st = b.dataset.style;
   setSw(st);
-  try { localStorage.setItem('drfaLocMapStyle', st); } catch (e) {}
+  try { localStorage.setItem('drfaLocMapStyle2', st); } catch (e) {}
   if (map) map.setStyle({ style: st });
 }));
 
 function init() {
   const d = readHash() || {};
-  const startStyle = savedStyle() || (d.s && d.s.indexOf('satellite') === 0 ? 'satellite_road_labels' : 'road');
+  const startStyle = savedStyle() || (d.s === 'road' ? 'road' : 'satellite_road_labels');
   setSw(startStyle);
   map = new atlas.Map('map', {
     center: okPt(d.c) ? [+d.c.lng, +d.c.lat] : [152.45, -31.75],
-    zoom: okPt(d.c) ? 14 : 7,
+    zoom: okPt(d.c) ? ZOOM : 7,
     style: startStyle,
     language: 'en-AU',
     renderWorldCopies: false,
@@ -130,6 +146,8 @@ function init() {
   });
   map.events.add('ready', () => { ready = true; draw(); });
   map.events.add('move', hideTip);
+  document.getElementById('zin').addEventListener('click', () => map.setCamera({ zoom: map.getCamera().zoom + 1, type: 'ease', duration: 200 }));
+  document.getElementById('zout').addEventListener('click', () => map.setCamera({ zoom: map.getCamera().zoom - 1, type: 'ease', duration: 200 }));
 }
 
 window.addEventListener('hashchange', draw);
