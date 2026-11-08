@@ -607,7 +607,10 @@ body.dark-mode .dp-edit-textarea{ background-color:var(--surface2); color:var(--
 </div>
 
 <script>
-const AZURE_KEY='DTXUfyEzWP2xb64BDnP2NCE3qdKRl4rLskMDwixH83RcsbBkbMV4JQQJ99CFACYeBjFofH37AAAgAZMP144l';
+// v89: the app sends the key (environment variable drfa_AzureMapsKey) as k in the hash. The built-in key is only a fallback
+// for apps that don't send one yet (the older app's MapScreen); delete it once nothing relies on it.
+const FALLBACK_KEY='DTXUfyEzWP2xb64BDnP2NCE3qdKRl4rLskMDwixH83RcsbBkbMV4JQQJ99CFACYeBjFofH37AAAgAZMP144l';
+let AZURE_KEY=FALLBACK_KEY;
 
 /* ── CATEGORY CONFIG ── */
 const CAT_CFG={
@@ -892,6 +895,7 @@ function loadFromHash(){
       // Normalise field names — Power Apps may send FullPath or {Path}
       documentsData=documentsData.map(d=>({...d, FullPath:d.FullPath||d['{FullPath}']||d['{Path}']||d.Path||''}));
       currentUser=p.currentUser||'';
+      if(p.k)AZURE_KEY=String(p.k);
       focusReq=p.focus||null; // v87: damage to open on load (DRFA Manager record card "Open on map")
       applyTheme(p.theme);
     } else if(Array.isArray(p)&&p.length){
@@ -1460,6 +1464,9 @@ function setMapStyle(mode){
 
 /* ── AZURE MAP INIT — lightweight road style ── */
 function initMap(){
+  if(azMap)return;
+  // No key yet (no fallback and the app hasn't sent one): wait, reloadData tries again when the hash changes
+  if(!AZURE_KEY){showLoader('Waiting for the map key…');return;}
   showLoader('Loading map…');
   azMap=new atlas.Map('azureMap',{
     center:[152.45,-31.75],
@@ -2290,6 +2297,7 @@ function reloadData(){
     buildStageDropdown(); buildCatChips(); populateDropdowns();
     renderStats(); renderList(); updateHasDamageBtn(); updatePins();
     setTimeout(alignStatsBar, 50);
+    if(!azMap&&typeof atlas!=='undefined')initMap();
     applyFocus();
   }
 }
