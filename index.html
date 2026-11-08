@@ -1480,10 +1480,12 @@ function initMap(){
 
 /* ── UPDATE PINS — batched via rAF to avoid blocking ──
    v86: Show = Points (pins coloured by "Colour by"), Clusters (bubbles that split as you zoom in) or Grid heat map (about 3 km squares). */
-let _pinTimer=null, _gridSrc=null, _gridLayer=null, _gridPopup=null, _zoomHooked=false;
+let _pinGen=0, _pinTimer=null, _gridSrc=null, _gridLayer=null, _gridPopup=null, _zoomHooked=false;
 function clearMapLayers(){
   if(typeof _listPopup!=='undefined'&&_listPopup)_listPopup.close();
-  markers.forEach(m=>azMap.markers.remove(m.marker||m));
+  // v87: clear every HTML marker on the map (pins and cluster bubbles are the only ones), not just the tracked list,
+  // so no pin from an earlier draw can stay on top of the filtered ones.
+  azMap.markers.clear();
   markers=[];
   if(_gridLayer){azMap.layers.remove(_gridLayer);_gridLayer=null;}
   if(_gridSrc){azMap.sources.remove(_gridSrc);_gridSrc=null;}
@@ -1576,6 +1578,9 @@ function updatePins(){
   // Debounce rapid calls
   if(_pinTimer)clearTimeout(_pinTimer);
   _pinTimer=setTimeout(()=>{
+    // v87: each run gets a number; a newer run stops older batches still queued (requestAnimationFrame pauses while the app
+    // hides the frame), which otherwise kept adding the old, unfiltered pins on top of the filtered ones.
+    const gen=++_pinGen;
     showLoader('Updating pins…');
     clearMapLayers();
     const vis=getFiltered();
@@ -1585,6 +1590,7 @@ function updatePins(){
     // Points: add in batches of 20 across animation frames
     const BATCH=20;
     function addBatch(start){
+      if(gen!==_pinGen)return;
       const end=Math.min(start+BATCH,vis.length);
       for(let i=start;i<end;i++)addPin(vis[i]);
       if(end<vis.length){requestAnimationFrame(()=>addBatch(end));}else{hideLoader();}
