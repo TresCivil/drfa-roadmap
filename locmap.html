@@ -20,7 +20,8 @@
   #zm button { border: 0; background: #FFFFFF; color: #374151; font: 600 16px/1 "Segoe UI", Arial, sans-serif; width: 28px; height: 26px; cursor: pointer; }
   #zm button + button { border-top: 1px solid #E5E7EB; }
   #zm button:hover, #sw button:not(.on):hover { background: #F3F4F6; }
-  .road { position: absolute; left: 50%; top: 100%; transform: translateX(-50%); margin-top: 4px; background: rgba(17,24,39,.85); color: #FFFFFF; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; white-space: nowrap; pointer-events: none; }
+  .road { position: absolute; left: 50%; top: 100%; transform: translateX(-50%); margin-top: 4px; background: rgba(17,24,39,.85); color: #FFFFFF; font-size: 11px; font-weight: 600; padding: 3px 7px; border-radius: 4px; white-space: nowrap; pointer-events: none; text-align: center; line-height: 1.3; font-weight: 500; }
+  .road .dn { font-weight: 700; }
   .pinwrap { position: relative; }
   .tip { position: absolute; transform: translate(-50%, -100%); margin-top: -14px; background: #111827; color: #FFFFFF; font-size: 12px; padding: 3px 7px; border-radius: 4px; white-space: nowrap; pointer-events: none; display: none; z-index: 5; }
 </style>
@@ -51,7 +52,7 @@
   The page re-reads the hash when it changes, so the app can switch records without a reload.
 */
 const AZURE_KEY = 'DTXUfyEzWP2xb64BDnP2NCE3qdKRl4rLskMDwixH83RcsbBkbMV4JQQJ99CFACYeBjFofH37AAAgAZMP144l';
-const RED = '#C50F1F', BLUE = '#2563EB', ZOOM = 17;
+const RED = '#C50F1F', BLUE = '#2563EB', ZOOM = 12;
 let map = null, ready = false, markers = [];
 
 function readHash() {
@@ -82,15 +83,17 @@ function addPin(p, colour, main) {
   el.className = 'pin' + (main ? ' main' : '');
   el.style.background = colour;
   wrap.appendChild(el);
-  if (main && p.road) {
+  if (main && (p.lbl || p.road)) {
+    // Label under the red pin: damage number (bold) and road name on a second line
     const lb = document.createElement('div');
     lb.className = 'road';
-    lb.textContent = p.road;
+    if (p.lbl) { const a = document.createElement('div'); a.className = 'dn'; a.textContent = p.lbl; lb.appendChild(a); }
+    if (p.road) { const b = document.createElement('div'); b.textContent = p.road; lb.appendChild(b); }
     wrap.appendChild(lb);
   }
   const m = new atlas.HtmlMarker({ htmlContent: wrap, position: [+p.lng, +p.lat], anchor: 'center' });
   map.markers.add(m);
-  map.events.add('mouseover', m, () => showTip(m, p.lbl));
+  if (!main) map.events.add('mouseover', m, () => showTip(m, p.lbl));
   map.events.add('mouseout', m, hideTip);
   markers.push(m);
 }
@@ -109,7 +112,7 @@ function draw() {
   near.forEach(p => addPin(p, BLUE, false));
   addPin(d.c, RED, true);   // added last so it sits on top
 
-  // Close in on the damage (about street level); nearby pins show when they are in view, or after zooming out.
+  // Centre on the damage at zoom 12 (about 6 km across in the card), so the nearby damages show around it.
   map.setCamera({ center: [+d.c.lng, +d.c.lat], zoom: ZOOM, type: 'jump' });
 }
 
