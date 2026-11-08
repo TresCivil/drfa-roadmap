@@ -674,6 +674,7 @@ const DEMO=[
 /* ── NORMALISE ── maps Power Apps JSON keys to internal fields ── */
 function numOrNull(v){if(v===undefined||v===null||v==='')return null;const n=parseFloat(v);return isNaN(n)?null:n;}
 let eventNames={};
+let spendReady, _spendAsked=false;
 let nativePanel=false; // true when the app shows the right panel itself (DRFA Manager)
 function normalise(raw){
   function g(...keys){
@@ -798,7 +799,7 @@ function renderLegend(vis,extra){
   const el=document.getElementById('mapLegend'); if(!el)return;
   let h='<b>Legend</b>';
   const mlabel=HEATM[heatBy][0].toLowerCase();
-  const empty=extra&&!extra.max?`<span style="color:#B45309">No ${mlabel} is recorded for the damages shown yet.</span>`:'';
+  const empty=extra&&!extra.max?(heatBy==='spend'&&spendReady===false?`<span style="color:#B45309">Loading spend to date from the ledger…</span>`:`<span style="color:#B45309">No ${mlabel} is recorded for the damages shown yet.</span>`):'';
   if(mapShow==='grid'){
     const mx=(extra&&extra.max)||0;
     h+=`<span>Each square is about 3 km. Colour shows ${mlabel}, see-through so the map shows underneath.</span>`;
@@ -815,18 +816,22 @@ function renderLegend(vis,extra){
 
 /* ── STATE ── */
 let records=[], allRecords=[], activeEvent='EN0001', activeCategory=null, filterDamage='', filterRoad='', filterPM='', filterPriority='', filterArea='', filterLife='', filterProg='', filterTeam='', filterOverall='', mapShow='points', colourBy='type', heatBy='erc', filterStatus='', filterHasDamage=true, filterSearch='', activeStage='status';
-let azMap=null, popup=null, markers=[], selectedMarker=null;
+let azMap=null, popup=null, markers=[], selectedMarker=null, selectedRec=null, _styleReady=false;
 
-function highlightPin(marker){
-  if(selectedMarker){
-    const el=selectedMarker.getElement();
-    if(el) el.classList.remove('pin-selected');
-  }
-  selectedMarker=marker;
-  if(marker){
-    const el=marker.getElement();
-    if(el) el.classList.add('pin-selected');
-  }
+// v91: pins are drawn by a map layer, so the selected damage gets its own HTML marker on top (it also keeps it above any overlapping pin).
+function drawSelected(){
+  if(selectedMarker&&azMap){azMap.markers.remove(selectedMarker);}
+  selectedMarker=null;
+  const r=selectedRec;
+  if(!r||!azMap||!_styleReady||mapShow==='grid'||!getFiltered().includes(r))return;
+  selectedMarker=new atlas.HtmlMarker({htmlContent:`<div style="display:block;"><div class="pin-inner" style="display:block;">${pinSvg(colourOf(r),r.category)}</div></div>`,position:[r.lng,r.lat],anchor:'bottom'});
+  azMap.markers.add(selectedMarker);
+  const el=selectedMarker.getElement();
+  if(el)el.classList.add('pin-selected');
+}
+function highlightPin(r){
+  selectedRec=r||null;
+  drawSelected();
 }
 const groupOpen={};
 const CAT_KEYS=['IRW','EW','EPAR'];
@@ -876,6 +881,8 @@ function loadFromHash(){
       statusOptions=(p.statusOptions||[]).sort((a,b)=>(a.SortOrder||0)-(b.SortOrder||0));
       priorityOptions=(p.priorityOptions||[]).sort((a,b)=>(a.SortOrder||0)-(b.SortOrder||0));
       nativePanel=!!p.nativePanel;
+      // v91: false = the app hasn't loaded the ledger yet; it does when Spend to date is picked (older apps don't send this)
+      spendReady=p.spendReady;
       eventNames={};(p.events||[]).forEach(e=>{if(e&&e.agrn)eventNames[String(e.agrn)]=e.name||'';});
       lifeOptions=(p.lifeOptions||[]).sort((a,b)=>(a.SortOrder||0)-(b.SortOrder||0));
       pmOptions=(p.pmOptions||[]).sort((a,b)=>(a.SortOrder||0)-(b.SortOrder||0));
@@ -1090,11 +1097,21 @@ function clearFilters(){
   document.getElementById('filterStatus').disabled=true;
   const _si=document.getElementById('sideSearchInput'); if(_si)_si.value='';
   const _sc=document.getElementById('sideSearchClear'); if(_sc)_sc.style.display='none';
+  // v90: Show, Colour by and Heat by go back to their defaults too
+  mapShow='points'; colourBy='type'; heatBy='erc';
+  document.getElementById('mapShow').value='points';
+  document.getElementById('colourBy').value='type';
+  document.getElementById('heatBy').value='erc';
+  document.getElementById('grpColourBy').style.display='';
+  document.getElementById('grpHeatBy').style.display='none';
+  document.getElementById('lblHeatBy').textContent='Heat by';
+  if(_listPopup)_listPopup.close();
   updateHasDamageBtn();
   Object.keys(groupOpen).forEach(k=>{groupOpen[k]=false;});
   buildCatChips(); if(popup)popup.close(); closeFloatPopup(); renderStats(); renderList(); updatePins();
-  // Notify Power Apps to close image gallery
-  postUp({type:'TASK_UPDATED', task:{type:'CLOSE_IMAGES', guid:'close'}});
+  fitAll(); // v90: zoom back out to all damages
+  // Tell Power Apps to close its panels. v90: at makes each message different; the app only reacts when the message changes, so a second Reset was ignored.
+  postUp({type:'TASK_UPDATED', task:{type:'CLOSE_IMAGES', guid:'close', at:Date.now()}});
 }
 function toggleHasDamage(){
   filterHasDamage=true;
@@ -1479,6 +1496,7 @@ function initMap(){
     showFeedbackLink:false,
   });
   azMap.events.add('ready',()=>{
+    _styleReady=true;
     hideLoader();
     // No Azure popup needed — using custom float panel
     setTimeout(()=>{updatePins(); _mapReady=true; applyFocus();}, 200);
@@ -1493,31 +1511,56 @@ function clearMapLayers(){
   // v87: clear every HTML marker on the map (pins and cluster bubbles are the only ones), not just the tracked list,
   // so no pin from an earlier draw can stay on top of the filtered ones.
   azMap.markers.clear();
-  markers=[];
+  markers=[]; selectedMarker=null;
+  if(_pinSrc)_pinSrc.clear();
   if(_gridLayer){azMap.layers.remove(_gridLayer);_gridLayer=null;}
   if(_gridSrc){azMap.sources.remove(_gridSrc);_gridSrc=null;}
   if(_gridPopup){_gridPopup.close();}
 }
-function addPin(r){
-  const rec=r;
-  const col=colourOf(r);
-  const htmlStr=`<div style="cursor:pointer;display:block;">
-    <div class="pin-inner" style="display:block;transition:filter .15s;">${pinSvg(col,rec.category)}</div>
-  </div>`;
-  const marker=new atlas.HtmlMarker({htmlContent:htmlStr,position:[r.lng,r.lat],anchor:'bottom'});
-  azMap.markers.add(marker);
-  markers.push({marker,record:rec});
-  azMap.events.add('click',marker,()=>{
-    highlightPin(marker);
+// v91: pins as one symbol layer (drawn by the graphics card) instead of an HTML element per pin: 1,500 pins go on the map at once and panning stays smooth.
+// Each pin colour and type is one icon, made from the same pinSvg at double size so it stays sharp.
+let _pinSrc=null, _pinLayer=null, _hoverLayer=null, _pinRows=[], _hoverI=-1;
+const _pinIcons={};
+function pinIconId(r){
+  const col=colourOf(r), id='pin_'+r.category+'_'+String(col).replace(/[^a-z0-9]/gi,'');
+  if(!_pinIcons[id]){
+    const svg=pinSvg(col,r.category).replace('width="36" height="46"','width="72" height="92"');
+    _pinIcons[id]=azMap.imageSprite.add(id,'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg));
+  }
+  return id;
+}
+function pinFromEvent(e){
+  const f=e.shapes&&e.shapes[0]; if(!f)return null;
+  const p=f.getProperties?f.getProperties():f.properties;
+  return p?p.i:null;
+}
+function setupPinLayer(){
+  if(_pinLayer)return;
+  _pinSrc=new atlas.source.DataSource();
+  azMap.sources.add(_pinSrc);
+  const icon={image:['get','icon'],allowOverlap:true,ignorePlacement:true,anchor:'bottom',size:0.5};
+  _pinLayer=new atlas.layer.SymbolLayer(_pinSrc,null,{iconOptions:icon,textOptions:{textField:''}});
+  _hoverLayer=new atlas.layer.SymbolLayer(_pinSrc,null,{iconOptions:{...icon,size:0.58},textOptions:{textField:''},filter:['==',['get','i'],-1]});
+  azMap.layers.add([_pinLayer,_hoverLayer]);
+  azMap.events.add('click',_pinLayer,e=>{
+    const rec=_pinRows[pinFromEvent(e)]; if(!rec)return;
+    highlightPin(rec);
     showFloatPopup(rec);
     highlightList(rec);
     postUp({type:'PIN_CLICK',damageNumber:rec.damageNumber,category:rec.category,eventNo:rec.eventNo,lat:rec.lat,lng:rec.lng});
   });
-  azMap.events.add('mouseenter',marker,()=>{
-    const el=marker.getElement();if(el){const inner=el.querySelector('.pin-inner');if(inner)inner.style.filter='brightness(1.2)';}
-  });
-  azMap.events.add('mouseleave',marker,()=>{
-    const el=marker.getElement();if(el){const inner=el.querySelector('.pin-inner');if(inner)inner.style.filter='';}
+  const setHover=i=>{if(i===_hoverI)return;_hoverI=i;_hoverLayer.setOptions({filter:['==',['get','i'],i]});};
+  azMap.events.add('mousemove',_pinLayer,e=>{azMap.getCanvasContainer().style.cursor='pointer';const i=pinFromEvent(e);if(i!=null)setHover(i);});
+  azMap.events.add('mouseleave',_pinLayer,()=>{azMap.getCanvasContainer().style.cursor='';setHover(-1);});
+}
+function drawPins(rows,gen){
+  setupPinLayer();
+  const icons=rows.map(pinIconId);
+  // The icons load first (only new colours take any time); a newer draw cancels this one.
+  return Promise.all(Object.values(_pinIcons)).then(()=>{
+    if(gen!==_pinGen)return;
+    _pinRows=rows;
+    _pinSrc.setShapes(rows.map((r,i)=>new atlas.data.Feature(new atlas.data.Point([r.lng,r.lat]),{i,icon:icons[i]})));
   });
 }
 // Group records into lat/lng cells (cell height = size degrees, width = size*1.2)
@@ -1535,14 +1578,15 @@ function listDamages(c){
   _listPopup.setOptions({position:[c.lng,c.lat],content:`<div style="padding:8px 12px;font:12px 'Segoe UI',sans-serif;max-height:260px;overflow:auto;min-width:200px"><div style="font-weight:700;margin-bottom:4px">${c.rs.length} damages</div>${rows}${rs.length>25?`<div style="color:#6B7280;padding-top:4px">+ ${rs.length-25} more. Zoom in to see them.</div>`:''}</div>`});
   _listPopup.open(azMap);
 }
-function drawClusters(vis){
+function drawClusters(vis,gen){
+  const singles=[];
   const z=azMap.getCamera().zoom||7;
   const sz=Math.max(.003,.5/Math.pow(2,z-7));
   const fn=HEATM[heatBy][1];
   const cells=gridCells(vis,sz).map(c=>({...c,v:c.rs.reduce((a,r)=>a+fn(r),0)}));
   const mx=Math.max(0,...cells.filter(c=>c.rs.length>1).map(c=>c.v));
   cells.forEach(c=>{
-    if(c.rs.length===1){addPin(c.rs[0]);return;}
+    if(c.rs.length===1){singles.push(c.rs[0]);return;}
     const n=c.rs.length;
     const label=heatBy==='count'?String(n):money(c.v);
     const d=heatBy==='count'||!mx?26+Math.round(Math.sqrt(n)*6):26+Math.round(Math.sqrt(c.v/mx)*34);
@@ -1558,6 +1602,7 @@ function drawClusters(vis){
       azMap.setCamera({center:[c.lng,c.lat],zoom:Math.min(16,z+2),type:'ease',duration:400});
     });
   });
+  drawPins(singles,gen);
   return {max:heatBy==='count'?1:mx};
 }
 function drawGrid(vis){
@@ -1580,29 +1625,19 @@ function drawGrid(vis){
   return {max:mx};
 }
 function updatePins(){
-  if(!azMap){renderLegend(getFiltered());return;}
+  if(!azMap||!_styleReady){renderLegend(getFiltered());return;} // the map's ready event draws the pins
   if(!_zoomHooked){_zoomHooked=true;azMap.events.add('zoomend',()=>{if(mapShow==='clusters')updatePins();});}
   // Debounce rapid calls
   if(_pinTimer)clearTimeout(_pinTimer);
   _pinTimer=setTimeout(()=>{
-    // v87: each run gets a number; a newer run stops older batches still queued (requestAnimationFrame pauses while the app
-    // hides the frame), which otherwise kept adding the old, unfiltered pins on top of the filtered ones.
+    // v87: each run gets a number; a newer run cancels an older one still waiting on its icons.
     const gen=++_pinGen;
-    showLoader('Updating pins…');
     clearMapLayers();
     const vis=getFiltered();
-    if(mapShow==='grid'){const x=drawGrid(vis);renderLegend(vis,x);hideLoader();return;}
-    if(mapShow==='clusters'){const x=drawClusters(vis);renderLegend(vis,x);hideLoader();return;}
-    renderLegend(vis);
-    // Points: add in batches of 20 across animation frames
-    const BATCH=20;
-    function addBatch(start){
-      if(gen!==_pinGen)return;
-      const end=Math.min(start+BATCH,vis.length);
-      for(let i=start;i<end;i++)addPin(vis[i]);
-      if(end<vis.length){requestAnimationFrame(()=>addBatch(end));}else{hideLoader();}
-    }
-    addBatch(0);
+    if(mapShow==='grid'){const x=drawGrid(vis);renderLegend(vis,x);}
+    else if(mapShow==='clusters'){const x=drawClusters(vis,gen);renderLegend(vis,x);}
+    else{renderLegend(vis);drawPins(vis,gen);}
+    drawSelected();
   }, 80);
 }
 
@@ -2224,8 +2259,7 @@ function flyToRecord(idx){
   const r=records[idx]; if(!r||!azMap)return;
   azMap.setCamera({center:[r.lng,r.lat],zoom:14,duration:800,type:'fly'});
   setTimeout(()=>{
-    const found=markers.find(m=>m.record===r);
-    if(found) highlightPin(found.marker);
+    highlightPin(r);
     showFloatPopup(r);
     highlightList(r);
   },900);
@@ -2281,8 +2315,7 @@ function applyFocus(){
   setTimeout(()=>{
     azMap.setCamera({center:[r.lng,r.lat],zoom:16,duration:600,type:'ease'});
     setTimeout(()=>{
-      const m=markers.find(x=>x.record===r);
-      if(m)highlightPin(m.marker);
+      highlightPin(r);
       showFloatPopup(r); highlightList(r);
     },700);
   },300);
@@ -2319,7 +2352,13 @@ document.getElementById('mapShow').addEventListener('change',function(){mapShow=
   document.getElementById('lblHeatBy').textContent=mapShow==='clusters'?'Cluster by':'Heat by';
   if(_listPopup)_listPopup.close();
   updatePins();});
-document.getElementById('heatBy').addEventListener('change',function(){heatBy=this.value;updatePins();});
+// v91: asks the app to load the ledger the first time Spend to date is picked; the spend then arrives with the next data update
+function askSpend(){
+  if(heatBy!=='spend'||spendReady!==false||_spendAsked)return;
+  _spendAsked=true;
+  postUp({type:'TASK_UPDATED',task:{type:'NEED_SPEND',guid:'spend',at:Date.now()}});
+}
+document.getElementById('heatBy').addEventListener('change',function(){heatBy=this.value;askSpend();updatePins();});
 document.getElementById('filterStatus').addEventListener('change',function(){filterStatus=this.value;renderStats();renderList();updatePins();});
 
 // Reload when Power Apps updates the iframe src
