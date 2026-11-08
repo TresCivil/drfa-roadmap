@@ -892,6 +892,7 @@ function loadFromHash(){
       // Normalise field names — Power Apps may send FullPath or {Path}
       documentsData=documentsData.map(d=>({...d, FullPath:d.FullPath||d['{FullPath}']||d['{Path}']||d.Path||''}));
       currentUser=p.currentUser||'';
+      focusReq=p.focus||null; // v87: damage to open on load (DRFA Manager record card "Open on map")
       applyTheme(p.theme);
     } else if(Array.isArray(p)&&p.length){
       rawRecords=p;
@@ -1473,7 +1474,7 @@ function initMap(){
   azMap.events.add('ready',()=>{
     hideLoader();
     // No Azure popup needed — using custom float panel
-    setTimeout(updatePins, 200);
+    setTimeout(()=>{updatePins(); _mapReady=true; applyFocus();}, 200);
   });
 }
 
@@ -2251,6 +2252,29 @@ function postUp(obj){
   }catch(e){}
 }
 
+/* ── FOCUS (v87) ── the app can send focus:{damageNumber, category, key} to open one damage:
+   the search box is set to its damage number (so only it shows; clear the search to see the rest),
+   the map zooms to it and it is selected, which posts RECORD_SELECTED so the app opens its right panel.
+   Each key is applied once, so photo-strip updates or saves don't re-open it. */
+let focusReq=null, _focusDone=null, _mapReady=false;
+function applyFocus(){
+  const f=focusReq; if(!f||!f.damageNumber||!_mapReady||!azMap)return;
+  const key=String(f.key||f.damageNumber); if(key===_focusDone)return;
+  const r=records.find(x=>x.damageNumber===f.damageNumber&&(!f.category||x.category===f.category));
+  if(!r)return;
+  _focusDone=key;
+  const inp=document.getElementById('sideSearchInput'); if(inp)inp.value=f.damageNumber;
+  onSearch(f.damageNumber);
+  setTimeout(()=>{
+    azMap.setCamera({center:[r.lng,r.lat],zoom:16,duration:600,type:'ease'});
+    setTimeout(()=>{
+      const m=markers.find(x=>x.record===r);
+      if(m)highlightPin(m.marker);
+      showFloatPopup(r); highlightList(r);
+    },700);
+  },300);
+}
+
 /* ── RELOAD DATA ── called whenever hash changes ── */
 function reloadData(){
   // Only the photo strip changed: update the panel, keep the map, list and filters as they are
@@ -2260,6 +2284,7 @@ function reloadData(){
     buildStageDropdown(); buildCatChips(); populateDropdowns();
     renderStats(); renderList(); updateHasDamageBtn(); updatePins();
     setTimeout(alignStatsBar, 50);
+    applyFocus();
   }
 }
 
