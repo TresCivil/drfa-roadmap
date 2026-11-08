@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>DRFA location map</title>
+<link rel="stylesheet" href="https://atlas.microsoft.com/sdk/javascript/mapcontrol/3/atlas.min.css"/>
+<script src="https://atlas.microsoft.com/sdk/javascript/mapcontrol/3/atlas.min.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #E8EFE3; font-family: "Segoe UI", Arial, sans-serif; }
+  #map { position: absolute; inset: 0; }
+  #msg { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; color: #686C75; font-size: 13px; }
+  .pin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,.35); cursor: default; }
+  .pin.main { width: 20px; height: 20px; }
+  #sw { position: absolute; top: 8px; right: 8px; z-index: 6; display: flex; background: #FFFFFF; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.3); overflow: hidden; }
+  #sw button { border: 0; background: #FFFFFF; color: #374151; font: 600 12px "Segoe UI", Arial, sans-serif; padding: 5px 10px; cursor: pointer; }
+  #sw button + button { border-left: 1px solid #E5E7EB; }
+  #sw button.on { background: #2563EB; color: #FFFFFF; }
+  .tip { position: absolute; transform: translate(-50%, -100%); margin-top: -14px; background: #111827; color: #FFFFFF; font-size: 12px; padding: 3px 7px; border-radius: 4px; white-space: nowrap; pointer-events: none; display: none; z-index: 5; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="msg">No coordinates recorded for this damage.</div>
+<div id="tip" class="tip"></div>
+<div id="sw" role="group" aria-label="Map style">
+  <button type="button" data-style="road" aria-pressed="true" class="on">Road</button>
+  <button type="button" data-style="satellite_road_labels" aria-pressed="false">Satellite</button>
+</div>
+<script>
+/*
+  DRFA location map: a plain Azure Map with no filters, list or panels.
+  Used by the DRFA Manager EW record Location card (TCIFrame code component).
+
+  Data comes in the URL hash as JSON (only % needs escaping as %25):
+    #{"c":{"lat":-31.9,"lng":152.4,"lbl":"EW1211-0001"},
+      "p":[{"lat":-31.91,"lng":152.41,"lbl":"EW1211-0002"}, ...],
+      "s":"road"}
+  c = the damage (red pin), p = nearby damages (blue pins), s = map style (optional:
+  road, satellite, satellite_road_labels, grayscale_light ...; default road).
+  The page re-reads the hash when it changes, so the app can switch records without a reload.
+*/
+const AZURE_KEY = 'DTXUfyEzWP2xb64BDnP2NCE3qdKRl4rLskMDwixH83RcsbBkbMV4JQQJ99CFACYeBjFofH37AAAgAZMP144l';
+const RED = '#C50F1F', BLUE = '#2563EB';
+let map = null, ready = false, markers = [];
+
+function readHash() {
+  const h = window.location.hash;
+  if (!h || h.length < 2) return null;
+  try { return JSON.parse(decodeURIComponent(h.substring(1))); } catch (e) { return null; }
+}
+
+function okPt(p) {
+  return p && isFinite(+p.lat) && isFinite(+p.lng) && !(+p.lat === 0 && +p.lng === 0);
+}
+
+function showTip(marker, text) {
+  const tip = document.getElementById('tip');
+  if (!text) return;
+  const px = map.positionsToPixels([marker.getOptions().position])[0];
+  tip.textContent = text;
+  tip.style.left = px[0] + 'px';
+  tip.style.top = px[1] + 'px';
+  tip.style.display = 'block';
+}
+function hideTip() { document.getElementById('tip').style.display = 'none'; }
+
+function addPin(p, colour, main) {
+  const el = document.createElement('div');
+  el.className = 'pin' + (main ? ' main' : '');
+  el.style.background = colour;
+  const m = new atlas.HtmlMarker({ htmlContent: el, position: [+p.lng, +p.lat], anchor: 'center' });
+  map.markers.add(m);
+  map.events.add('mouseover', m, () => showTip(m, p.lbl));
+  map.events.add('mouseout', m, hideTip);
+  markers.push(m);
+}
+
+function draw() {
+  if (!ready) return;
+  const d = readHash() || {};
+  const msg = document.getElementById('msg');
+  map.markers.clear(); markers = []; hideTip();
+  if (!okPt(d.c)) { msg.style.display = 'flex'; document.getElementById('sw').style.display = 'none'; return; }
+  msg.style.display = 'none';
+  document.getElementById('sw').style.display = 'flex';
+
+  const near = (Array.isArray(d.p) ? d.p : []).filter(okPt);
+  near.forEach(p => addPin(p, BLUE, false));
+  addPin(d.c, RED, true);   // added last so it sits on top
+
+  if (near.length) {
+    const pts = near.map(p => [+p.lng, +p.lat]).concat([[+d.c.lng, +d.c.lat]]);
+    map.setCamera({ bounds: atlas.data.BoundingBox.fromPositions(pts), padding: 30, maxZoom: 15, type: 'jump' });
+  } else {
+    map.setCamera({ center: [+d.c.lng, +d.c.lat], zoom: 15, type: 'jump' });
+  }
+}
+
+/* Road / Satellite switch (top right). The choice is remembered in this browser and kept when the app
+   switches record; the hash's "s" only sets the starting style when nothing has been chosen yet. */
+function savedStyle() { try { return localStorage.getItem('drfaLocMapStyle'); } catch (e) { return null; } }
+function setSw(style) {
+  document.querySelectorAll('#sw button').forEach(b => {
+    const on = b.dataset.style === style;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+}
+document.querySelectorAll('#sw button').forEach(b => b.addEventListener('click', () => {
+  const st = b.dataset.style;
+  setSw(st);
+  try { localStorage.setItem('drfaLocMapStyle', st); } catch (e) {}
+  if (map) map.setStyle({ style: st });
+}));
+
+function init() {
+  const d = readHash() || {};
+  const startStyle = savedStyle() || (d.s && d.s.indexOf('satellite') === 0 ? 'satellite_road_labels' : 'road');
+  setSw(startStyle);
+  map = new atlas.Map('map', {
+    center: okPt(d.c) ? [+d.c.lng, +d.c.lat] : [152.45, -31.75],
+    zoom: okPt(d.c) ? 14 : 7,
+    style: startStyle,
+    language: 'en-AU',
+    renderWorldCopies: false,
+    showLogo: false,
+    showFeedbackLink: false,
+    authOptions: { authType: 'subscriptionKey', subscriptionKey: AZURE_KEY }
+  });
+  map.events.add('ready', () => { ready = true; draw(); });
+  map.events.add('move', hideTip);
+}
+
+window.addEventListener('hashchange', draw);
+if (window.atlas) init(); else window.addEventListener('load', init);
+</script>
+</body>
+
+</html>
